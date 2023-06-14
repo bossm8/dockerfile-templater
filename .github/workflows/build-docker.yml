@@ -31,6 +31,7 @@ jobs:
         run: | 
           go run main.go \
             -dockerfile.tpl pkg/docker/Dockerfile.tpl \
+            -dockerfile.sep . \
             -variants pkg/docker/variants.yml.tpl \
             -variants.cfg pkg/docker/variants.cfg.yml
 

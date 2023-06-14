@@ -73,7 +73,10 @@ func logf(
 	if level == levelDebug && !verbose {
 		return
 	}
-	logs[level](fmt.Sprintf("[%s]: %s", level, message), v...)
+	logs[level](
+		fmt.Sprintf("[%s]: %s", level, message),
+		v...,
+	)
 }
 
 // Renders the gotemplate from the file with the passed data into memory
@@ -81,17 +84,32 @@ func renderTpl(
 	filename *string,
 	data interface{},
 ) []byte {
-	logf(levelDebug, "Rendering template '%s'", *filename)
+	logf(
+		levelDebug,
+		"Rendering template '%s'",
+		*filename,
+	)
 
 	tpl, err := template.ParseFiles(*filename)
 	if err != nil {
-		logf(levelError, "Could not parse template '%s': %s", *filename, err)
+		logf(
+			levelError,
+			"Could not parse template '%s': %s",
+			*filename, err,
+		)
 	}
 
 	var rendered bytes.Buffer
-	err = tpl.Execute(&rendered, data)
+	err = tpl.Execute(
+		&rendered,
+		data,
+	)
 	if err != nil {
-		logf(levelError, "Could not execute template '%s': %s", *filename, err)
+		logf(
+			levelError,
+			"Could not execute template '%s': %s",
+			*filename, err,
+		)
 	}
 
 	return rendered.Bytes()
@@ -103,10 +121,17 @@ func loadYMLFromBytes(
 	obj interface{},
 ) {
 	if debugYMLTpl {
-		logf(levelDebug, fmt.Sprintf("Loading yaml structure: \n\n%s\n\n", string(content)))
+		logf(
+			levelDebug,
+			fmt.Sprintf("Loading yaml structure: \n\n%s\n\n", string(content)),
+		)
 	}
 	if err := yaml.Unmarshal(content, obj); err != nil {
-		logf(levelError, "Failed to parse yaml: %s", err)
+		logf(
+			levelError,
+			"Failed to parse yaml: %s",
+			err,
+		)
 	}
 }
 
@@ -115,11 +140,19 @@ func loadYMLFromFile(
 	filename *string,
 	obj interface{},
 ) {
-	logf(levelDebug, "Loading yaml content from '%s'", *filename)
+	logf(
+		levelDebug,
+		"Loading yaml content from '%s'",
+		*filename,
+	)
 
 	yml, err := os.ReadFile(*filename)
 	if err != nil {
-		logf(levelError, "Failed to load file '%s': %s", *filename, err)
+		logf(
+			levelError,
+			"Failed to load file '%s': %s",
+			*filename, err,
+		)
 	}
 
 	loadYMLFromBytes(yml, obj)
@@ -129,17 +162,33 @@ func loadYMLFromFile(
 func ensureOutDirExists(
 	dirname *string,
 ) {
-	logf(levelDebug, "Checking that output directory '%s' exists", *dirname)
+	logf(
+		levelDebug,
+		"Checking that output directory '%s' exists",
+		*dirname,
+	)
 
 	_, err := os.Stat(*dirname)
 
 	if os.IsNotExist(err) {
-		logf(levelInfo, "Creating non existing output directory '%s'", *dirname)
+		logf(
+			levelInfo,
+			"Creating non existing output directory '%s'",
+			*dirname,
+		)
 		if err = os.Mkdir(*dirname, os.ModePerm); err != nil {
-			logf(levelError, "Failed creating output directory '%s': %s\n", *dirname, err)
+			logf(
+				levelError,
+				"Failed creating output directory '%s': %s\n",
+				*dirname, err,
+			)
 		}
 	} else if err != nil {
-		logf(levelError, "Failed checking output directory: %s", err)
+		logf(
+			levelError,
+			"Failed checking output directory: %s",
+			err,
+		)
 	}
 }
 
@@ -148,10 +197,22 @@ func writeDockerFile(
 	filename *string,
 	content []byte,
 ) {
-	logf(levelInfo, "Writing to '%s'", *filename)
+	logf(
+		levelInfo,
+		"Writing to '%s'",
+		*filename,
+	)
 
-	if err := os.WriteFile(*filename, content, os.ModePerm); err != nil {
-		logf(levelError, "Could not write Dockerfile to '%s': %s", *filename, err)
+	if err := os.WriteFile(
+		*filename,
+		content,
+		os.ModePerm,
+	); err != nil {
+		logf(
+			levelError,
+			"Could not write Dockerfile to '%s': %s",
+			*filename, err,
+		)
 	}
 }
 
@@ -162,14 +223,31 @@ func loadVariantsAsTemplate(
 	variantsTplFile *string,
 	variants *templateData,
 ) {
-	logf(levelDebug, "Loading variant config from '%s'", *variantsCfgFile)
-	logf(levelDebug, "Variants ('%s') will be treated as template", *variantsTplFile)
+	logf(
+		levelDebug,
+		"Loading variant config from '%s'",
+		*variantsCfgFile,
+	)
+	logf(
+		levelDebug,
+		"Variants ('%s') will be treated as template",
+		*variantsTplFile,
+	)
 
 	vc := variantsTemplateData{}
-	loadYMLFromFile(variantsCfgFile, &vc)
+	loadYMLFromFile(
+		variantsCfgFile,
+		&vc,
+	)
 
-	res := renderTpl(variantsTplFile, &vc)
-	loadYMLFromBytes(res, &variants)
+	res := renderTpl(
+		variantsTplFile,
+		&vc,
+	)
+	loadYMLFromBytes(
+		res,
+		&variants,
+	)
 }
 
 // Loads the variants from a non-template yml file
@@ -177,9 +255,16 @@ func loadVariantsAsPlain(
 	variantsFile *string,
 	variants *templateData,
 ) {
-	logf(levelDebug, "Loading variants from '%s'", *variantsFile)
+	logf(
+		levelDebug,
+		"Loading variants from '%s'",
+		*variantsFile,
+	)
 
-	loadYMLFromFile(variantsFile, &variants)
+	loadYMLFromFile(
+		variantsFile,
+		&variants,
+	)
 }
 
 // Loads the variants from the (optional) configuration and the template
@@ -190,9 +275,16 @@ func loadVariants(
 	variants := templateData{}
 
 	if *variantsCfgFile != "" {
-		loadVariantsAsTemplate(variantsCfgFile, variantsTplFile, &variants)
+		loadVariantsAsTemplate(
+			variantsCfgFile,
+			variantsTplFile,
+			&variants,
+		)
 	} else {
-		loadVariantsAsPlain(variantsTplFile, &variants)
+		loadVariantsAsPlain(
+			variantsTplFile,
+			&variants,
+		)
 	}
 
 	if len(variants.Variants) == 0 {
@@ -210,7 +302,10 @@ func loadVariants(
 func debugVariants(
 	variants *templateData,
 ) {
-	logf(levelDebug, "Building Dockerfiles for variants:")
+	logf(
+		levelDebug,
+		"Building Dockerfiles for variants:",
+	)
 
 	yml := "\n"
 
@@ -218,7 +313,11 @@ func debugVariants(
 		res, err := yaml.Marshal(variant)
 
 		if err != nil {
-			logf(levelWarn, "Could not marshal variant %+v for debugging", variant)
+			logf(
+				levelWarn,
+				"Could not marshal variant %+v for debugging",
+				variant,
+			)
 			continue
 		}
 
@@ -228,17 +327,21 @@ func debugVariants(
 	fmt.Printf(yml)
 }
 
-// Renders the dockerfile template for each variant to a Dockerfile into the output directory
+// Renders the dockerfile template for each variant to a Dockerfile into the
+// output directory
 func renderDockerfiles(
 	variants *templateData,
 	outputDir *string,
 	dockerfileTpl *string,
+	dockerfileSep *string,
 ) {
 	for _, variant := range variants.Variants {
 
 		dockerfile := fmt.Sprintf(
-			"Dockerfile.%s.%s",
+			"Dockerfile%s%s%s%s",
+			*dockerfileSep,
 			*variant.Image.Name,
+			*dockerfileSep,
 			*variant.Image.Tag,
 		)
 		dockerfile = path.Join(
@@ -254,9 +357,15 @@ func renderDockerfiles(
 			"tag":  *variant.Image.Tag,
 		}
 
-		res := renderTpl(dockerfileTpl, &variant.Data)
+		res := renderTpl(
+			dockerfileTpl,
+			&variant.Data,
+		)
 
-		writeDockerFile(&dockerfile, res)
+		writeDockerFile(
+			&dockerfile,
+			res,
+		)
 	}
 }
 
@@ -284,6 +393,11 @@ func main() {
 		"Dockerfile.tpl",
 		"The template dockerile to use",
 	)
+	dockerfileSep := flag.String(
+		"dockerfile.sep",
+		"_-_",
+		"The separator used in the outputted Dockerfiles",
+	)
 	flag.BoolVar(
 		&verbose,
 		"verbose",
@@ -300,9 +414,17 @@ func main() {
 
 	flag.Parse()
 
-	variants := loadVariants(variantsCfgFile, variantsTplFile)
+	variants := loadVariants(
+		variantsCfgFile,
+		variantsTplFile,
+	)
 
 	ensureOutDirExists(outputDir)
 
-	renderDockerfiles(variants, outputDir, dockerfileTpl)
+	renderDockerfiles(
+		variants,
+		outputDir,
+		dockerfileTpl,
+		dockerfileSep,
+	)
 }
