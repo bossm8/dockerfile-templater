@@ -7,13 +7,13 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/dockerfile-templater
+  IMAGE_NAME: ${{ github.repository }}
 
 
 jobs:
 
   build-dockerfiles:
-    runs-on: ubuntu:latest
+    runs-on: ubuntu-latest
 
     permissions:
       contents: read
@@ -28,7 +28,11 @@ jobs:
           go-version: '1.20'
         
       - name: Generate Dockerfiles
-        run: go run main.go -dockerfile.tpl pkg/docker/Dockerfile.tpl -variants pkg/docker/variants.yml.tpl -variants.cfg pkg/docker/variants.cfg.yml
+        run: | 
+          go run main.go \
+            -dockerfile.tpl pkg/docker/Dockerfile.tpl \
+            -variants pkg/docker/variants.yml.tpl \
+            -variants.cfg pkg/docker/variants.cfg.yml
 
       - name: Upload Generated Dockerfiles
         uses: actions/upload-artifact@v3
@@ -37,23 +41,26 @@ jobs:
           path: dockerfiles
 
   release-dockerimages:
-    runs-on: ubuntu:latest
+    runs-on: ubuntu-latest
 
     needs: build-dockerfiles
 
     strategy:
       matrix:
-        dockerfile: [dockerfiles/Dockerfile.templater.latest, dockerfile/Dockerfile.templater.debug]
+        dockerfile: [Dockerfile.templater.debug, Dockerfile.templater.latest]
 
     permissions:
       contents: read
 
     steps:
 
+      - uses: actions/checkout@v3
+
       - name: Download Generated Dockerfiles
         uses: actions/download-artifact@v3
         with:
           name: dockerfiles
+          path: ${{ github.workspace }}/dockerfiles
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
@@ -63,11 +70,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }} 
 
       - name: Set Image Tag
-        run: echo "IMAGE_TAG=$(${{ matrix.dockerfile }} | cut -d '.' -f 3)" >> $GITHUB_ENV
+        run: |
+          echo "IMAGE_TAG=$(echo ${{ matrix.dockerfile }} | cut -d '.' -f 3)" >> $GITHUB_ENV
+          ls -la ${{ github.workspace }}/dockerfiles
 
       - name: Build and Push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: true
-          file: ${{ matrix.dockerfile }}
+          context: ${{ github.workspace }}
+          file: ${{ github.workspace }}/dockerfiles/${{ matrix.dockerfile }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}

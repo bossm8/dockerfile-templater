@@ -9,7 +9,7 @@
         "vscode": {
             "extensions": [
                 "golang.go"
-			]
+            ]
         }
     },
 
