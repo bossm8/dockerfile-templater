@@ -1,0 +1,17 @@
+{
+    "name": "dockerfile-template",
+
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "golang.go"
+			]
+        }
+    },
+
+    "remoteUser": "tpl"
+}

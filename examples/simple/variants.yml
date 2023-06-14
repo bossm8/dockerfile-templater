@@ -1,0 +1,6 @@
+variants:
+
+  - image:
+      name: ubuntu
+      tag: unmodified
+    from_image: ubuntu:latest
