@@ -107,11 +107,13 @@ This image is built from scratch and contains the templater only.
 Example usage:
 
 ```bash
-docker run -it --rm --user $(id -u):$(id -g) -v ${PWD}:${PWD} -w ${PWD} \
-    ghcr.io/bossm8/dockerfile-templater:latest \
-        -dockerfile.tpl Dockerfile.tpl \
-        -variants variants.yml \
-        -variants.cfg variants.cfg.yml
+docker run -it --rm \
+           --user $(id -u):$(id -g) \
+           -v ${PWD}:${PWD} -w ${PWD} \
+       ghcr.io/bossm8/dockerfile-templater:latest \
+           -dockerfile.tpl Dockerfile.tpl \
+           -variants variants.yml \
+           -variants.cfg variants.cfg.yml
 ```
 
 #### Debug
@@ -137,7 +139,7 @@ generate-dockerfiles:
             -out.dir ${CI_PROJECT_DIR}/dockerfiles
     artifacts:
         paths:
-            - ${CI_PROJECT_DIR}/dockerfiles
+            - dockerfiles
 
 build-images:
     stage: build
