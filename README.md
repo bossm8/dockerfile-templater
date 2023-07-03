@@ -40,10 +40,11 @@ Dockerfile template.
 
 #### Templated
 
-As mentioned, the variants can itself be templated, this enables a high flexibility
-and reduces configuration duplications. When the flag `-variants.cfg` is supplied,
-this file will be interpreted as a template itself and be processed with the
-contents of the variants configuration before it will be fed into the Dockerfile
+As mentioned, the variants can itself be templated, this enables a high
+flexibility such as different combinations of package versions and reduces
+configuration duplications.  When the flag `-variants.cfg` is supplied, this
+file will be interpreted as a template itself and be processed with the contents
+of the variants configuration before it will be fed into the Dockerfile
 template.
 
 ### Variants YML Config
@@ -61,14 +62,18 @@ Flag: `-dockerfile.tpl`
 The templated Dockerfile which accepts the configuration of the variants yml. It
 must be a valid go template.
 
-## Output
+## Usage
 
-The generated Dockerfiles are written to an output directory (`-out.dir`).
-They will be named according to this scheme:
+### Output Directory
+
+Flag: `-out.dir`
+
+The generated Dockerfiles are written to an output directory with the following
+name scheme:
 
 `Dockerfile[sep]<image.name>[sep]<image.tag>`
 
-You can then build the images like this for example:
+This scheme allows you to build the images like this for example:
 
 ```bash
 for DF in $(find dockerfiles -type f); do
@@ -83,9 +88,8 @@ Notes:
 - `image.name` and `image.tag` are read from the currently processed variant 
   specified in the [variants](#variants-yml) file):
 
-## Usage
 
-#### Verbosity
+### Verbosity
 
 There are two additional flags which control the verbosity of the templater:
 
@@ -96,10 +100,10 @@ There are two additional flags which control the verbosity of the templater:
 
 ### Docker
 
-There are currently two flavours of the dockerized templater, `latest` and `debug`.
-Similar to the containers from [kaniko](https://github.com/GoogleContainerTools/kaniko),
-the `debug` variant is based on a busybox image and can thus be used with an interactive
-shell.
+There are currently two flavours of the dockerized templater, `latest` and
+`debug`.  Similar to the containers from
+[kaniko](https://github.com/GoogleContainerTools/kaniko), the `debug` variant is
+based on a busybox image and can thus be used with an interactive shell.
 
 #### Latest
 
@@ -167,6 +171,6 @@ TBD
 
 ## Examples
 
-The `examples` directory, as well as the `pkg/docker` (which is used to built
-the templater image) contain some simple examples of files which can be used
-with the templater.
+The `examples` directory, as well as the `pkg/docker` (which is used to build
+the templater image with github workflows) contain some simple examples of files
+which can be used with the templater.
