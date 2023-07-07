@@ -5,14 +5,22 @@ Simple GO utility to generate Dockerfiles from a template accepting yml data.
 ## Introduction
 
 This utility helps deduplicating code by generating multiple Dockerfiles 
-from a single template. Making multi variant image builds easier.
+from a single template. Making multi-variant image builds easier and faster.
 
 The templater is able to generate Dockerfiles in different variants from a 
-[go templated](https://pkg.go.dev/text/template) Dockerfile. The data passed
-to the template is read from a yml configuration file ([variants](#variants-yml)). To
-make things more dynamic, the variants file can itself be a template and 
-accept data from an additional yml file ([variants configuration](#variants-yml-config)). 
-Read below to get more information about each file and their required format.
+[go templated](https://pkg.go.dev/text/template) Dockerfile (the templater includes
+[sprig](https://github.com/Masterminds/sprig) to provide more template
+functionality). The data passed to the template is read from a yml configuration
+file ([variants](#variants-yml)). To make things more dynamic, the variants file
+can itself be a template and accept data from an additional yml file ([variants
+configuration](#variants-yml-config)).  Read below to get more information about
+each file and their required format.
+
+### Template Functions
+
+The templater includes [sprig](https://github.com/Masterminds/sprig) (which is also
+included in [helm](https://helm.sh/docs/chart_template_guide/functions_and_pipelines/))
+to extend the limited set of [go template functions](https://pkg.go.dev/text/template#hdr-Functions).
 
 ### Variants YML
 
