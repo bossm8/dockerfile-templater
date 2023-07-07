@@ -13,8 +13,10 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"gopkg.in/yaml.v3"
 )
 
@@ -90,7 +92,9 @@ func renderTpl(
 		*filename,
 	)
 
-	tpl, err := template.ParseFiles(*filename)
+	tplName := filepath.Base(*filename)
+	tpl := template.New(tplName).Funcs(sprig.FuncMap())
+	tpl, err := tpl.ParseFiles(*filename)
 	if err != nil {
 		logf(
 			levelError,
@@ -100,8 +104,9 @@ func renderTpl(
 	}
 
 	var rendered bytes.Buffer
-	err = tpl.Execute(
+	err = tpl.ExecuteTemplate(
 		&rendered,
+		tplName,
 		data,
 	)
 	if err != nil {
@@ -158,6 +163,24 @@ func loadYMLFromFile(
 	loadYMLFromBytes(yml, obj)
 }
 
+// Creates the output directory
+func createOutDir(
+	dirname *string,
+) {
+	logf(
+		levelInfo,
+		"Creating non existing output directory '%s'",
+		*dirname,
+	)
+	if err := os.Mkdir(*dirname, os.ModePerm); err != nil {
+		logf(
+			levelError,
+			"Failed creating output directory '%s': %s\n",
+			*dirname, err,
+		)
+	}
+}
+
 // Makes sure the output directory exists
 func ensureOutDirExists(
 	dirname *string,
@@ -171,18 +194,7 @@ func ensureOutDirExists(
 	_, err := os.Stat(*dirname)
 
 	if os.IsNotExist(err) {
-		logf(
-			levelInfo,
-			"Creating non existing output directory '%s'",
-			*dirname,
-		)
-		if err = os.Mkdir(*dirname, os.ModePerm); err != nil {
-			logf(
-				levelError,
-				"Failed creating output directory '%s': %s\n",
-				*dirname, err,
-			)
-		}
+		createOutDir(dirname)
 	} else if err != nil {
 		logf(
 			levelError,
@@ -267,35 +279,37 @@ func loadVariantsAsPlain(
 	)
 }
 
-// Loads the variants from the (optional) configuration and the template
-func loadVariants(
-	variantsCfgFile *string,
-	variantsTplFile *string,
-) *templateData {
-	variants := templateData{}
+// logs missing attributes as error
+func logMissingAttribute(
+	attribute string,
+) {
+	logf(
+		levelError,
+		"Variant missing required attribute '%s'\n"+
+			"Required Structure:\n\n"+
+			"variants:\n\n"+
+			"   - image:\n"+
+			"       name: <IMAGE_NAME>\n"+
+			"       tag: <IMAGE_TAG>\n\n",
+		attribute,
+	)
+}
 
-	if *variantsCfgFile != "" {
-		loadVariantsAsTemplate(
-			variantsCfgFile,
-			variantsTplFile,
-			&variants,
-		)
-	} else {
-		loadVariantsAsPlain(
-			variantsTplFile,
-			&variants,
-		)
+// Checks if the variants contain the required tags
+func verifyVariants(
+	variants *templateData,
+) {
+	for _, variant := range variants.Variants {
+		if variant.Image == nil {
+			logMissingAttribute("image")
+		}
+		if variant.Image.Name == nil {
+			logMissingAttribute("image.name")
+		}
+		if variant.Image.Tag == nil {
+			logMissingAttribute("image.tag")
+		}
 	}
-
-	if len(variants.Variants) == 0 {
-		logf(levelError, "No variants configured")
-	}
-
-	if verbose {
-		debugVariants(&variants)
-	}
-
-	return &variants
 }
 
 // Debug prints the processed variants as yml
@@ -324,7 +338,40 @@ func debugVariants(
 		yml += string(res) + "\n"
 	}
 
-	fmt.Printf(yml)
+	fmt.Print(yml)
+}
+
+// Loads the variants from the (optional) configuration and the template
+func loadVariants(
+	variantsCfgFile *string,
+	variantsTplFile *string,
+) *templateData {
+	variants := templateData{}
+
+	if *variantsCfgFile != "" {
+		loadVariantsAsTemplate(
+			variantsCfgFile,
+			variantsTplFile,
+			&variants,
+		)
+	} else {
+		loadVariantsAsPlain(
+			variantsTplFile,
+			&variants,
+		)
+	}
+
+	if len(variants.Variants) == 0 {
+		logf(levelError, "No variants configured")
+	}
+
+	verifyVariants(&variants)
+
+	if verbose {
+		debugVariants(&variants)
+	}
+
+	return &variants
 }
 
 // Renders the dockerfile template for each variant to a Dockerfile into the
