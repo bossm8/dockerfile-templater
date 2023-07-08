@@ -70,6 +70,15 @@ Flag: `-dockerfile.tpl`
 The templated Dockerfile which accepts the configuration of the variants yml. It
 must be a valid go template.
 
+#### Template Directory
+
+Flag: `-dockerfile.tpldir`
+
+An optional directory which contains
+[includable templates](https://pkg.go.dev/text/template#hdr-Associated_templates) for your
+templated Dockerfile. Files in this directory which end in `.tpl` can then be
+included in your main Dockerfile template (or in the includes itself).
+
 ## Usage
 
 ### Output Directory
@@ -180,5 +189,5 @@ TBD
 ## Examples
 
 The `examples` directory, as well as the `pkg/docker` (which is used to build
-the templater image with github workflows) contain some simple examples of files
-which can be used with the templater.
+the templater image with github workflows) contain some basic example files which
+can be used with the templater.
