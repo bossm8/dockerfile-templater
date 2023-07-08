@@ -61,8 +61,8 @@ const (
 // Log level mappings to the real log function
 var logs = map[logLevel]func(string, ...any){
 	levelError: log.Fatalf,
-	levelInfo:  log.Printf,
 	levelWarn:  log.Printf,
+	levelInfo:  log.Printf,
 	levelDebug: log.Printf,
 }
 
@@ -84,6 +84,7 @@ func logf(
 // Renders the gotemplate from the file with the passed data into memory
 func renderTpl(
 	filename *string,
+	templateDir *string,
 	data interface{},
 ) []byte {
 	logf(
@@ -94,7 +95,10 @@ func renderTpl(
 
 	tplName := filepath.Base(*filename)
 	tpl := template.New(tplName).Funcs(sprig.FuncMap())
-	tpl, err := tpl.ParseFiles(*filename)
+
+	var err error
+
+	tpl, err = tpl.ParseFiles(*filename)
 	if err != nil {
 		logf(
 			levelError,
@@ -103,13 +107,25 @@ func renderTpl(
 		)
 	}
 
+	// include the templates in the optional template directory
+	if templateDir != nil && *templateDir != "" {
+		glob := filepath.Join(*templateDir, "*.tpl")
+		tpl, err = tpl.ParseGlob(glob)
+		if err != nil {
+			logf(
+				levelError,
+				"Could not parse templates in '%s': %s",
+				*templateDir, err,
+			)
+		}
+	}
+
 	var rendered bytes.Buffer
-	err = tpl.ExecuteTemplate(
+	if err = tpl.ExecuteTemplate(
 		&rendered,
 		tplName,
 		data,
-	)
-	if err != nil {
+	); err != nil {
 		logf(
 			levelError,
 			"Could not execute template '%s': %s",
@@ -254,6 +270,7 @@ func loadVariantsAsTemplate(
 
 	res := renderTpl(
 		variantsTplFile,
+		nil,
 		&vc,
 	)
 	loadYMLFromBytes(
@@ -380,6 +397,7 @@ func renderDockerfiles(
 	variants *templateData,
 	outputDir *string,
 	dockerfileTpl *string,
+	dockerfileTplDir *string,
 	dockerfileSep *string,
 ) {
 	for _, variant := range variants.Variants {
@@ -406,6 +424,7 @@ func renderDockerfiles(
 
 		res := renderTpl(
 			dockerfileTpl,
+			dockerfileTplDir,
 			&variant.Data,
 		)
 
@@ -440,6 +459,11 @@ func main() {
 		"Dockerfile.tpl",
 		"The template dockerile to use",
 	)
+	dockerfileTplDir := flag.String(
+		"dockerfile.tpldir",
+		"",
+		"A directory containing templates to process (files must end in .tpl)",
+	)
 	dockerfileSep := flag.String(
 		"dockerfile.sep",
 		"_-_",
@@ -472,6 +496,7 @@ func main() {
 		variants,
 		outputDir,
 		dockerfileTpl,
+		dockerfileTplDir,
 		dockerfileSep,
 	)
 }
