@@ -2,6 +2,8 @@ FROM golang:{{ .go_version }}
 
 RUN apt-get update && apt-get upgrade -y
 
+ENV CGO_ENABLED=0
+
 WORKDIR ${GOPATH}/src/
 COPY . . 
 
