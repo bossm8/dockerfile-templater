@@ -32,9 +32,244 @@ type variant struct {
 	Data  map[string]interface{} `yaml:",inline"`
 }
 
+// Verifies if the required attributes for each variant are defined and
+// fails if not
+func (v *variant) Verify() {
+	if v.Image == nil {
+		logMissingAttribute("image")
+	}
+	if v.Image.Name == nil {
+		logMissingAttribute("image.name")
+	}
+	if v.Image.Tag == nil {
+		logMissingAttribute("image.tag")
+	}
+}
+
+// Get the output filename of this variant
+func (v *variant) OutputFile(fmt *string) string {
+	tpl, err := template.New("OutputFile").Parse(*fmt)
+	if err != nil {
+		logf(
+			levelError,
+			"Failed to parse output file format '%s': %s",
+			*fmt, err,
+		)
+	}
+
+	var filename = bytes.Buffer{}
+	if err := tpl.Execute(&filename, v.Data); err != nil {
+		logf(
+			levelError,
+			"Failed to generate output file name: %s",
+			err,
+		)
+	}
+
+	return filename.String()
+}
+
+// Returns the variant as yml
+func (v *variant) ToString() string {
+	res, err := yaml.Marshal(v)
+	if err == nil {
+		return string(res)
+	}
+	logf(
+		levelWarn,
+		"Could not marshal variant %+v for debugging", v,
+	)
+	return ""
+}
+
 // The container for the variants yml
 type templateData struct {
 	Variants []*variant `yaml:"variants"`
+
+	VariantsCfgFile *string
+	VariantsTplFile *string
+}
+
+// Verifies if the variants configuration is valid
+func (t *templateData) Verify() {
+
+	if len(t.Variants) == 0 {
+		logf(levelError, "No variants configured")
+	}
+
+	for _, v := range t.Variants {
+		v.Verify()
+	}
+
+}
+
+// Outputs the processed variants as yml
+func (t *templateData) Debug() {
+	logf(
+		levelDebug,
+		"Building Dockerfiles for variants:",
+	)
+
+	yml := "\n"
+
+	for _, variant := range t.Variants {
+		res := variant.ToString()
+		yml += string(res) + "\n"
+	}
+
+	fmt.Print(yml)
+}
+
+// Loads the variants configuration from a templated variants.yml
+func (t *templateData) loadFromTemplate() {
+	logf(
+		levelDebug,
+		"Loading variant config from '%s'", *t.VariantsCfgFile,
+	)
+	logf(
+		levelDebug,
+		"Variants ('%s') will be treated as template", *t.VariantsTplFile,
+	)
+
+	vc := variantsTemplateData{}
+	loadYMLFromFile(t.VariantsCfgFile, &vc)
+
+	tpl := parseTemplate(t.VariantsTplFile)
+	res := exectuteTemplate(&vc, tpl)
+
+	loadYMLFromBytes(res, t)
+}
+
+// Loads the variants configuration from a plain variants.yml
+func (t *templateData) loadFromPlain() {
+	logf(
+		levelDebug,
+		"Loading variants from '%s'", *t.VariantsTplFile,
+	)
+
+	loadYMLFromFile(t.VariantsTplFile, t)
+}
+
+// Loads the template data from the yml file(s)
+func (t *templateData) Load() {
+
+	if t.VariantsCfgFile != nil && *t.VariantsCfgFile != "" {
+		t.loadFromTemplate()
+	} else {
+		t.loadFromPlain()
+	}
+
+	t.Verify()
+}
+
+// templater holds the main logic to render the Dockerfiles to the output directory
+type templater struct {
+	DockerfileTpl    *string
+	DockerfileTplDir *string
+	OutputDir        *string
+	OutputFmt        *string
+
+	template *template.Template
+}
+
+// Renders the Dockerfiles to the output directory
+func (t *templater) Render(variants []*variant) {
+
+	for _, variant := range variants {
+		// Re-add the image struct with lowercase values since otherwise they
+		// are not accessible or when added with the Image struct itself
+		// only under .Name and .Tag
+		variant.Data["image"] = map[string]interface{}{
+			"name": *variant.Image.Name,
+			"tag":  *variant.Image.Tag,
+		}
+
+		dockerfile := path.Join(
+			*t.OutputDir,
+			variant.OutputFile(t.OutputFmt),
+		)
+
+		rendered := exectuteTemplate(
+			variant.Data,
+			t.template,
+		)
+
+		logf(
+			levelInfo,
+			"Writing to '%s'", dockerfile,
+		)
+
+		if err := os.WriteFile(dockerfile, rendered, os.ModePerm); err != nil {
+			logf(
+				levelError,
+				"Could not write Dockerfile to '%s': %s", dockerfile, err,
+			)
+		}
+	}
+}
+
+// Loads the includable template definitions
+func (t *templater) initTemplateDir() {
+	if t.DockerfileTplDir == nil || *t.DockerfileTplDir == "" {
+		return
+	}
+
+	glob := filepath.Join(*t.DockerfileTplDir, "*.tpl")
+
+	var err error
+	t.template, err = t.template.ParseGlob(glob)
+	if err != nil {
+		logf(
+			levelError,
+			"Could not parse templates in '%s': %s",
+			*t.DockerfileTplDir, err,
+		)
+	}
+}
+
+// Initializes the main Dockerfile template
+func (t *templater) initTemplate() {
+	t.template = parseTemplate(t.DockerfileTpl)
+	t.initTemplateDir()
+}
+
+// Creates the output directory
+func (t *templater) createOutDir() {
+	logf(
+		levelInfo,
+		"Creating non existing output directory '%s'", *t.OutputDir,
+	)
+	if err := os.Mkdir(*t.OutputDir, os.ModePerm); err != nil {
+		logf(
+			levelError,
+			"Failed creating output directory '%s': %s\n", *t.OutputDir, err,
+		)
+	}
+}
+
+// Makes sure the output directory exists
+func (t *templater) ensureOutDir() {
+	logf(
+		levelDebug,
+		"Checking that output directory '%s' exists", *t.OutputDir,
+	)
+
+	_, err := os.Stat(*t.OutputDir)
+
+	if os.IsNotExist(err) {
+		t.createOutDir()
+	} else if err != nil {
+		logf(
+			levelError,
+			"Failed checking output directory: %s", err,
+		)
+	}
+}
+
+// Initializes the templater by preparing the template and the output
+func (t *templater) Init() {
+	t.initTemplate()
+	t.ensureOutDir()
 }
 
 // Type for the contents of the variants configuration file
@@ -53,9 +288,9 @@ type logLevel string
 // Supported log levels
 const (
 	levelError logLevel = "ERROR"
-	levelInfo           = "INFO"
-	levelWarn           = "WARN"
-	levelDebug          = "DEBUG"
+	levelInfo  logLevel = "INFO"
+	levelWarn  logLevel = "WARN"
+	levelDebug logLevel = "DEBUG"
 )
 
 // Log level mappings to the real log function
@@ -81,55 +316,63 @@ func logf(
 	)
 }
 
-// Renders the gotemplate from the file with the passed data into memory
-func renderTpl(
-	filename *string,
-	templateDir *string,
-	data interface{},
-) []byte {
+// logs missing attributes as error
+func logMissingAttribute(
+	attribute string,
+) {
 	logf(
-		levelDebug,
-		"Rendering template '%s'",
-		*filename,
+		levelError,
+		"Variant missing required attribute '%s'\n"+
+			"Required Structure:\n\n"+
+			"variants:\n\n"+
+			"   - image:\n"+
+			"       name: <IMAGE_NAME>\n"+
+			"       tag: <IMAGE_TAG>\n\n",
+		attribute,
 	)
+}
 
-	tplName := filepath.Base(*filename)
-	tpl := template.New(tplName).Funcs(sprig.FuncMap())
+// Parses a template defined in a file
+func parseTemplate(
+	tplFile *string,
+) *template.Template {
 
+	tpl := template.New(filepath.Base(*tplFile)).Funcs(sprig.FuncMap())
 	var err error
+	tpl, err = tpl.ParseFiles(*tplFile)
 
-	tpl, err = tpl.ParseFiles(*filename)
 	if err != nil {
 		logf(
 			levelError,
 			"Could not parse template '%s': %s",
-			*filename, err,
+			*tplFile, err,
 		)
 	}
+	return tpl
+}
 
-	// include the templates in the optional template directory
-	if templateDir != nil && *templateDir != "" {
-		glob := filepath.Join(*templateDir, "*.tpl")
-		tpl, err = tpl.ParseGlob(glob)
-		if err != nil {
-			logf(
-				levelError,
-				"Could not parse templates in '%s': %s",
-				*templateDir, err,
-			)
-		}
-	}
+// Executes a template with the provided data
+func exectuteTemplate(
+	tplData interface{},
+	tpl *template.Template,
+) []byte {
+	logf(
+		levelDebug,
+		"Rendering template '%s'",
+		tpl.Name(),
+	)
 
 	var rendered bytes.Buffer
-	if err = tpl.ExecuteTemplate(
+	err := tpl.ExecuteTemplate(
 		&rendered,
-		tplName,
-		data,
-	); err != nil {
+		tpl.Name(),
+		&tplData,
+	)
+	if err != nil {
 		logf(
 			levelError,
 			"Could not execute template '%s': %s",
-			*filename, err,
+			tpl.Name(), err,
 		)
 	}
 
@@ -150,8 +393,7 @@ func loadYMLFromBytes(
 	if err := yaml.Unmarshal(content, obj); err != nil {
 		logf(
 			levelError,
-			"Failed to parse yaml: %s",
-			err,
+			"Failed to parse yaml: %s", err,
 		)
 	}
 }
@@ -163,312 +405,59 @@ func loadYMLFromFile(
 ) {
 	logf(
 		levelDebug,
-		"Loading yaml content from '%s'",
-		*filename,
+		"Loading yaml content from '%s'", *filename,
 	)
 
 	yml, err := os.ReadFile(*filename)
 	if err != nil {
 		logf(
 			levelError,
-			"Failed to load file '%s': %s",
-			*filename, err,
+			"Failed to load file '%s': %s", *filename, err,
 		)
 	}
 
 	loadYMLFromBytes(yml, obj)
 }
 
-// Creates the output directory
-func createOutDir(
-	dirname *string,
-) {
-	logf(
-		levelInfo,
-		"Creating non existing output directory '%s'",
-		*dirname,
-	)
-	if err := os.Mkdir(*dirname, os.ModePerm); err != nil {
-		logf(
-			levelError,
-			"Failed creating output directory '%s': %s\n",
-			*dirname, err,
-		)
-	}
-}
-
-// Makes sure the output directory exists
-func ensureOutDirExists(
-	dirname *string,
-) {
-	logf(
-		levelDebug,
-		"Checking that output directory '%s' exists",
-		*dirname,
-	)
-
-	_, err := os.Stat(*dirname)
-
-	if os.IsNotExist(err) {
-		createOutDir(dirname)
-	} else if err != nil {
-		logf(
-			levelError,
-			"Failed checking output directory: %s",
-			err,
-		)
-	}
-}
-
-// Writes a dockerfile with the passed content to filename
-func writeDockerFile(
-	filename *string,
-	content []byte,
-) {
-	logf(
-		levelInfo,
-		"Writing to '%s'",
-		*filename,
-	)
-
-	if err := os.WriteFile(
-		*filename,
-		content,
-		os.ModePerm,
-	); err != nil {
-		logf(
-			levelError,
-			"Could not write Dockerfile to '%s': %s",
-			*filename, err,
-		)
-	}
-}
-
-// Loads the variants from a template yml file and processes it with the data
-// from the variants configuration file
-func loadVariantsAsTemplate(
-	variantsCfgFile *string,
-	variantsTplFile *string,
-	variants *templateData,
-) {
-	logf(
-		levelDebug,
-		"Loading variant config from '%s'",
-		*variantsCfgFile,
-	)
-	logf(
-		levelDebug,
-		"Variants ('%s') will be treated as template",
-		*variantsTplFile,
-	)
-
-	vc := variantsTemplateData{}
-	loadYMLFromFile(
-		variantsCfgFile,
-		&vc,
-	)
-
-	res := renderTpl(
-		variantsTplFile,
-		nil,
-		&vc,
-	)
-	loadYMLFromBytes(
-		res,
-		&variants,
-	)
-}
-
-// Loads the variants from a non-template yml file
-func loadVariantsAsPlain(
-	variantsFile *string,
-	variants *templateData,
-) {
-	logf(
-		levelDebug,
-		"Loading variants from '%s'",
-		*variantsFile,
-	)
-
-	loadYMLFromFile(
-		variantsFile,
-		&variants,
-	)
-}
-
-// logs missing attributes as error
-func logMissingAttribute(
-	attribute string,
-) {
-	logf(
-		levelError,
-		"Variant missing required attribute '%s'\n"+
-			"Required Structure:\n\n"+
-			"variants:\n\n"+
-			"   - image:\n"+
-			"       name: <IMAGE_NAME>\n"+
-			"       tag: <IMAGE_TAG>\n\n",
-		attribute,
-	)
-}
-
-// Checks if the variants contain the required tags
-func verifyVariants(
-	variants *templateData,
-) {
-	for _, variant := range variants.Variants {
-		if variant.Image == nil {
-			logMissingAttribute("image")
-		}
-		if variant.Image.Name == nil {
-			logMissingAttribute("image.name")
-		}
-		if variant.Image.Tag == nil {
-			logMissingAttribute("image.tag")
-		}
-	}
-}
-
-// Debug prints the processed variants as yml
-func debugVariants(
-	variants *templateData,
-) {
-	logf(
-		levelDebug,
-		"Building Dockerfiles for variants:",
-	)
-
-	yml := "\n"
-
-	for _, variant := range variants.Variants {
-		res, err := yaml.Marshal(variant)
-
-		if err != nil {
-			logf(
-				levelWarn,
-				"Could not marshal variant %+v for debugging",
-				variant,
-			)
-			continue
-		}
-
-		yml += string(res) + "\n"
-	}
-
-	fmt.Print(yml)
-}
-
-// Loads the variants from the (optional) configuration and the template
-func loadVariants(
-	variantsCfgFile *string,
-	variantsTplFile *string,
-) *templateData {
-	variants := templateData{}
-
-	if *variantsCfgFile != "" {
-		loadVariantsAsTemplate(
-			variantsCfgFile,
-			variantsTplFile,
-			&variants,
-		)
-	} else {
-		loadVariantsAsPlain(
-			variantsTplFile,
-			&variants,
-		)
-	}
-
-	if len(variants.Variants) == 0 {
-		logf(levelError, "No variants configured")
-	}
-
-	verifyVariants(&variants)
-
-	if verbose {
-		debugVariants(&variants)
-	}
-
-	return &variants
-}
-
-// Renders the dockerfile template for each variant to a Dockerfile into the
-// output directory
-func renderDockerfiles(
-	variants *templateData,
-	outputDir *string,
-	dockerfileTpl *string,
-	dockerfileTplDir *string,
-	dockerfileSep *string,
-) {
-	for _, variant := range variants.Variants {
-
-		dockerfile := fmt.Sprintf(
-			"Dockerfile%s%s%s%s",
-			*dockerfileSep,
-			*variant.Image.Name,
-			*dockerfileSep,
-			*variant.Image.Tag,
-		)
-		dockerfile = path.Join(
-			*outputDir,
-			dockerfile,
-		)
-
-		// Re-add the image struct with lowercase values since otherwise they
-		// are not accessible or when added with the Image struct itself
-		// only under .Name and .Tag
-		variant.Data["image"] = map[string]interface{}{
-			"name": *variant.Image.Name,
-			"tag":  *variant.Image.Tag,
-		}
-
-		res := renderTpl(
-			dockerfileTpl,
-			dockerfileTplDir,
-			&variant.Data,
-		)
-
-		writeDockerFile(
-			&dockerfile,
-			res,
-		)
-	}
-}
-
 func main() {
-	variantsTplFile := flag.String(
+
+	templater := &templater{}
+	variants := &templateData{}
+
+	variants.VariantsTplFile = flag.String(
 		"variants",
 		"variants.yml",
 		"The main variants definition file, "+
 			"this file will be treated as a template when variants.cfg is defined",
 	)
-	variantsCfgFile := flag.String(
+	variants.VariantsCfgFile = flag.String(
 		"variants.cfg",
 		"",
 		"Optional variants configuration. "+
 			"If provided, the variants yml will be treated as template "+
 			"and this configuration will be applied on it",
 	)
-	outputDir := flag.String(
+	templater.OutputDir = flag.String(
 		"out.dir",
 		"dockerfiles",
 		"Where to output the rendered Dockerfiles",
 	)
-	dockerfileTpl := flag.String(
+	templater.OutputFmt = flag.String(
+		"out.fmt",
+		"Dockerfile-_-{{ .image.name }}-_-{{ .image.tag }}",
+		"The naming format for the outputed Dockerfiles",
+	)
+	templater.DockerfileTpl = flag.String(
 		"dockerfile.tpl",
 		"Dockerfile.tpl",
 		"The template dockerile to use",
 	)
-	dockerfileTplDir := flag.String(
+	templater.DockerfileTplDir = flag.String(
 		"dockerfile.tpldir",
 		"",
 		"A directory containing templates to process (files must end in .tpl)",
 	)
-	dockerfileSep := flag.String(
-		"dockerfile.sep",
-		"_-_",
-		"The separator used in the outputted Dockerfiles",
-	)
+
 	flag.BoolVar(
 		&verbose,
 		"verbose",
@@ -485,18 +474,12 @@ func main() {
 
 	flag.Parse()
 
-	variants := loadVariants(
-		variantsCfgFile,
-		variantsTplFile,
-	)
+	variants.Load()
 
-	ensureOutDirExists(outputDir)
+	if verbose {
+		variants.Debug()
+	}
 
-	renderDockerfiles(
-		variants,
-		outputDir,
-		dockerfileTpl,
-		dockerfileTplDir,
-		dockerfileSep,
-	)
+	templater.Init()
+	templater.Render(variants.Variants)
 }
