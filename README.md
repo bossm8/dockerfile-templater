@@ -81,16 +81,21 @@ included in your main Dockerfile template (or in the includes itself).
 
 ## Usage
 
-### Output Directory
+### Output
 
 Flag: `-out.dir`
 
-The generated Dockerfiles are written to an output directory with the following
-name scheme:
+The generated Dockerfiles are written to the specified directory when rendered.
 
-`Dockerfile[sep]<image.name>[sep]<image.tag>`
+### Output Name Format
 
-This scheme allows you to build the images like this for example:
+Flag: `-out.fmt`
+
+Dockerfiles are written with the specified naming scheme to the output directory.
+The format takes a go template string that can contain variables defined in the variants.
+
+E.g. `Dockerfile_-_{{.image.name}}_-_{{.image.tag}}` allows you to 
+build the images like this:
 
 ```bash
 for DF in $(find dockerfiles -type f); do
@@ -99,12 +104,6 @@ for DF in $(find dockerfiles -type f); do
     docker build . -f ${DF} -t ${NAME}:${TAG}
 done
 ```
-
-Notes:
-- `[sep]` can be specified with `-dockerfile.sep` and defaults to `_-_`
-- `image.name` and `image.tag` are read from the currently processed variant 
-  specified in the [variants](#variants-yml) file):
-
 
 ### Verbosity
 
