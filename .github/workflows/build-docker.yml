@@ -32,7 +32,7 @@ jobs:
         run: | 
           go run main.go \
             -dockerfile.tpl pkg/docker/Dockerfile.tpl \
-            -output.fmt "Dockerfile.{{ .image.name }}.{{ .image.tag }}" . \
+            -out.fmt "Dockerfile.{{ .image.name }}.{{ .image.tag }}" \
             -variants pkg/docker/variants.yml.tpl \
             -variants.cfg pkg/docker/variants.cfg.yml
 
