@@ -1,0 +1,5 @@
+dockerfile:
+  tpl: pkg/docker/Dockerfile.tpl
+variants:
+  def: pkg/docker/variants.yml.tpl
+  cfg: pkg/docker/variants.cfg.yml

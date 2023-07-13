@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"bytes"
-	"fmt"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,9 +18,12 @@ import (
 )
 
 var (
-	config  string
-	verbose bool
-	debug   bool
+	config       string
+	verbose      bool
+	debug        bool
+	printVersion bool
+
+	version string = "dev"
 
 	TemplaterCMD = &cobra.Command{
 		Use:              "templater",
@@ -47,40 +50,58 @@ func init() {
 		dockerfileTplFlag, "t", "Dockerfile.tpl",
 		"Path to the Dockerfile template",
 	)
-	viper.BindPFlag(dockerfileTplFlag, TemplaterCMD.PersistentFlags().Lookup(dockerfileTplFlag))
+	_ = viper.BindPFlag(
+		dockerfileTplFlag,
+		TemplaterCMD.PersistentFlags().Lookup(dockerfileTplFlag),
+	)
 
 	TemplaterCMD.PersistentFlags().StringArrayP(
 		dockerfileTplDirFlag, "d", make([]string, 0),
 		"Path to a directory containing includable template definitions",
 	)
-	viper.BindPFlag(dockerfileTplDirFlag, TemplaterCMD.PersistentFlags().Lookup(dockerfileTplDirFlag))
+	_ = viper.BindPFlag(
+		dockerfileTplDirFlag,
+		TemplaterCMD.PersistentFlags().Lookup(dockerfileTplDirFlag),
+	)
 
 	TemplaterCMD.PersistentFlags().StringP(
 		variantsDefFlag, "i", "variants.yml",
 		"Path to the variants definition. "+
 			"This file may be a templated yml which will be processes when variants.cfg is defined",
 	)
-	viper.BindPFlag(variantsDefFlag, TemplaterCMD.PersistentFlags().Lookup(variantsDefFlag))
+	_ = viper.BindPFlag(
+		variantsDefFlag,
+		TemplaterCMD.PersistentFlags().Lookup(variantsDefFlag),
+	)
 
 	TemplaterCMD.PersistentFlags().StringP(
 		variantsCfgFlag, "g", "",
 		"Path to the variants configuration yml. "+
 			"This flag is optional and when provided, variants.def will be treated as template",
 	)
-	viper.BindPFlag(variantsCfgFlag, TemplaterCMD.PersistentFlags().Lookup(variantsCfgFlag))
+	_ = viper.BindPFlag(
+		variantsCfgFlag,
+		TemplaterCMD.PersistentFlags().Lookup(variantsCfgFlag),
+	)
 
 	TemplaterCMD.PersistentFlags().StringP(
 		outDirFlag, "o", "dockerfiles",
 		"Directory to write generated Dockerfiles to",
 	)
-	viper.BindPFlag(outDirFlag, TemplaterCMD.PersistentFlags().Lookup(outDirFlag))
+	_ = viper.BindPFlag(
+		outDirFlag,
+		TemplaterCMD.PersistentFlags().Lookup(outDirFlag),
+	)
 
 	TemplaterCMD.PersistentFlags().StringP(
 		outFmtFlag, "f", "Dockerfile.{{ .image.name }}.{{ .image.tag }}",
 		"Name format for generated Dockerfiles. "+
 			"The format accepts a valid go template string which may contain any keys present in the variants",
 	)
-	viper.BindPFlag(outFmtFlag, TemplaterCMD.PersistentFlags().Lookup(outFmtFlag))
+	_ = viper.BindPFlag(
+		outFmtFlag,
+		TemplaterCMD.PersistentFlags().Lookup(outFmtFlag),
+	)
 
 	TemplaterCMD.Flags().StringVarP(
 		&config, "config", "c", "", "Configuration file",
@@ -90,6 +111,9 @@ func init() {
 	)
 	TemplaterCMD.Flags().BoolVarP(
 		&debug, "debug", "y", false, "Output processed yml variant files",
+	)
+	TemplaterCMD.Flags().BoolVarP(
+		&printVersion, "version", "V", false, "Get the templater version",
 	)
 
 	viper.SetEnvPrefix("DTPL")
@@ -119,6 +143,11 @@ func run(_ *cobra.Command, _ []string) {
 }
 
 func preRun(_ *cobra.Command, _ []string) {
+	if printVersion {
+		log.Println(version)
+		os.Exit(0)
+	}
+
 	if verbose {
 		utils.SetVerbose()
 	}
@@ -149,7 +178,7 @@ func preRun(_ *cobra.Command, _ []string) {
 	}
 }
 
-// The actual variant of Dockerfile which will be passed to the template
+// The actual variant of Dockerfile which will be passed to the template.
 type variant struct {
 	Image *struct {
 		Name *string `yaml:"name"`
@@ -159,9 +188,9 @@ type variant struct {
 }
 
 // Verifies if the required attributes for each variant are defined and
-// fails if not
+// fails if not.
 func (v *variant) Verify() {
-	// logs missing attributes as error
+	// logs missing attributes as error.
 	var logMissingAttribute = func(attribute string) {
 		utils.Error(
 			"Variant missing required attribute '%s'\n"+
@@ -173,20 +202,24 @@ func (v *variant) Verify() {
 			attribute,
 		)
 	}
+
 	if v.Image == nil {
 		logMissingAttribute("image")
 	}
+
 	if v.Image.Name == nil {
 		logMissingAttribute("image.name")
 	}
+
 	if v.Image.Tag == nil {
 		logMissingAttribute("image.tag")
 	}
 }
 
-// Get the output filename of this variant
+// Get the output filename of this variant.
 func (v *variant) OutputFile() string {
 	fmt := viper.GetString(outFmtFlag)
+
 	tpl, err := template.New("OutputFile").Parse(fmt)
 	if err != nil {
 		utils.Error(
@@ -206,19 +239,21 @@ func (v *variant) OutputFile() string {
 	return filename.String()
 }
 
-// Returns the variant as yml
-func (v *variant) ToString() string {
+// Returns the variant as yml.
+func (v *variant) String() string {
 	res, err := yaml.Marshal(v)
 	if err == nil {
 		return string(res)
 	}
+
 	utils.Warn(
 		"Could not marshal variant %+v for debugging", v,
 	)
+
 	return ""
 }
 
-// The container for the variants yml
+// The container for the variants yml.
 type variants struct {
 	Variants []*variant `yaml:"variants"`
 
@@ -226,9 +261,8 @@ type variants struct {
 	VariantsTplFile string
 }
 
-// Verifies if the variants configuration is valid
+// Verifies if the variants configuration is valid.
 func (t *variants) Verify() {
-
 	if len(t.Variants) == 0 {
 		utils.Error("No variants configured")
 	}
@@ -236,10 +270,9 @@ func (t *variants) Verify() {
 	for _, v := range t.Variants {
 		v.Verify()
 	}
-
 }
 
-// Outputs the processed variants as yml
+// Outputs the processed variants as yml.
 func (t *variants) Debug() {
 	utils.Debug(
 		"Building Dockerfiles for variants:",
@@ -248,14 +281,13 @@ func (t *variants) Debug() {
 	yml := "\n"
 
 	for _, variant := range t.Variants {
-		res := variant.ToString()
-		yml += string(res) + "\n"
+		yml += variant.String() + "\n"
 	}
 
-	fmt.Print(yml)
+	log.Print(yml)
 }
 
-// Loads the variants configuration from a templated variants.yml
+// Loads the variants configuration from a templated variants.yml.
 func (t *variants) loadFromTemplate() {
 	utils.Debug(
 		"Loading variant config from '%s'", t.VariantsCfgFile,
@@ -265,6 +297,7 @@ func (t *variants) loadFromTemplate() {
 	)
 
 	var vc map[string]interface{}
+
 	utils.LoadYMLFromFile(t.VariantsCfgFile, &vc)
 
 	tpl := utils.ParseTemplate(t.VariantsTplFile)
@@ -273,7 +306,7 @@ func (t *variants) loadFromTemplate() {
 	utils.LoadYMLFromBytes(res, t)
 }
 
-// Loads the variants configuration from a plain variants.yml
+// Loads the variants configuration from a plain variants.yml.
 func (t *variants) loadFromPlain() {
 	utils.Debug(
 		"Loading variants from '%s'", t.VariantsTplFile,
@@ -282,9 +315,8 @@ func (t *variants) loadFromPlain() {
 	utils.LoadYMLFromFile(t.VariantsTplFile, t)
 }
 
-// Loads the template data from the yml file(s)
+// Loads the template data from the yml file(s).
 func (t *variants) Load() {
-
 	if t.VariantsCfgFile == "" {
 		t.loadFromPlain()
 	} else {
@@ -294,7 +326,7 @@ func (t *variants) Load() {
 	t.Verify()
 }
 
-// templater holds the main logic to render the Dockerfiles to the output directory
+// templater holds the main logic to render the Dockerfiles to the output directory.
 type templater struct {
 	DockerfileTpl     string
 	DockerfileTplDirs []string
@@ -303,9 +335,8 @@ type templater struct {
 	template *template.Template
 }
 
-// Renders the Dockerfiles to the output directory
+// Renders the Dockerfiles to the output directory.
 func (t *templater) Render(variants []*variant) {
-
 	for _, variant := range variants {
 		// Re-add the image struct with lowercase values since otherwise they
 		// are not accessible or when added with the Image struct itself
@@ -342,7 +373,7 @@ func (t *templater) Render(variants []*variant) {
 	}
 }
 
-// Loads the includable template definitions
+// Loads the includable template definitions.
 func (t *templater) initTemplateDirs() {
 	for _, dir := range t.DockerfileTplDirs {
 		utils.Debug(
@@ -366,17 +397,18 @@ func (t *templater) initTemplateDirs() {
 	}
 }
 
-// Initializes the main Dockerfile template
+// Initializes the main Dockerfile template.
 func (t *templater) initTemplate() {
 	t.template = utils.ParseTemplate(t.DockerfileTpl)
 	t.initTemplateDirs()
 }
 
-// Creates the output directory
+// Creates the output directory.
 func (t *templater) createOutDir() {
 	utils.Info(
 		"Creating non existing output directory '%s'", t.OutputDir,
 	)
+
 	if err := os.Mkdir(t.OutputDir, os.ModePerm); err != nil {
 		utils.Error(
 			"Failed creating output directory '%s': %s\n", t.OutputDir, err,
@@ -384,7 +416,7 @@ func (t *templater) createOutDir() {
 	}
 }
 
-// Makes sure the output directory exists
+// Makes sure the output directory exists.
 func (t *templater) ensureOutDir() {
 	utils.Debug(
 		"Checking that output directory '%s' exists", t.OutputDir,
@@ -392,7 +424,7 @@ func (t *templater) ensureOutDir() {
 
 	_, err := os.Stat(t.OutputDir)
 
-	if os.IsNotExist(err) {
+	if err != nil && os.IsNotExist(err) {
 		t.createOutDir()
 	} else if err != nil {
 		utils.Error(
@@ -401,7 +433,7 @@ func (t *templater) ensureOutDir() {
 	}
 }
 
-// Initializes the templater by preparing the template and the output
+// Initializes the templater by preparing the template and the output.
 func (t *templater) Init() {
 	t.initTemplate()
 	t.ensureOutDir()

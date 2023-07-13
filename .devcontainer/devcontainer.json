@@ -1,4 +1,4 @@
-{
+{ 
     "name": "dockerfile-template",
 
     "build": {
@@ -8,10 +8,13 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "golang.go"
-            ]
+				"golang.go",
+				"github.vscode-github-actions"
+			]
         }
     },
 
-    "remoteUser": "tpl"
+    "mounts": ["source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind,ro=true"],
+
+    "remoteUser": "root"
 }

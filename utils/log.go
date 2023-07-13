@@ -2,42 +2,42 @@ package utils
 
 import (
 	"fmt"
-	"log"
+	golog "log"
 )
 
 var (
 	verbose bool
 )
 
-// Logs an error and exits the application
+// Logs an error and exits the application.
 func Error(message string, v ...any) {
-	_log(levelError, message, v...)
+	log(levelError, message, v...)
 }
 
-// Logs a warning
+// Logs a warning.
 func Warn(message string, v ...any) {
-	_log(levelWarn, message, v...)
+	log(levelWarn, message, v...)
 }
 
-// Logs an information
+// Logs an information.
 func Info(message string, v ...any) {
-	_log(levelInfo, message, v...)
+	log(levelInfo, message, v...)
 }
 
-// Logs debug messages
+// Logs debug messages.
 func Debug(message string, v ...any) {
 	if verbose {
-		_log(levelDebug, message, v...)
+		log(levelDebug, message, v...)
 	}
 }
 
-// Enables verbose output (debug)
+// Enables verbose output (debug).
 func SetVerbose() {
 	verbose = true
 }
 
-// Log a formatted string with the configured level
-func _log(
+// Log a formatted string with the configured level.
+func log(
 	level logLevel,
 	message string,
 	v ...any,
@@ -48,10 +48,10 @@ func _log(
 	)
 }
 
-// Defines our log level
+// Defines our log level.
 type logLevel string
 
-// Supported log levels
+// Supported log levels.
 const (
 	levelError logLevel = "ERROR"
 	levelInfo  logLevel = "INFO"
@@ -59,10 +59,10 @@ const (
 	levelDebug logLevel = "DEBUG"
 )
 
-// Log level mappings to the real log function
+// Log level mappings to the real log function.
 var logs = map[logLevel]func(string, ...any){
-	levelError: log.Fatalf,
-	levelWarn:  log.Printf,
-	levelInfo:  log.Printf,
-	levelDebug: log.Printf,
+	levelError: golog.Fatalf,
+	levelWarn:  golog.Printf,
+	levelInfo:  golog.Printf,
+	levelDebug: golog.Printf,
 }
