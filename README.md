@@ -126,6 +126,12 @@ with `DTPL` and dots replaced with underscores.
 
 Example for `--dockerfile.tpldir`:
 
+CLI usage:
+```bash
+(..) --dockerfile.tpldir some/dir --dockerfile.tpldir other/dir
+```
+
+Configuration file:
 ```yml
 dockerfile:
     tpldir:
@@ -133,6 +139,7 @@ dockerfile:
         - other/dir
 ```
 
+Environment variable:
 ```bash
 export DTPL_DOCKERFILE_TPLDIR="some/dir other/dir"
 ```
