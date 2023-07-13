@@ -19,6 +19,8 @@ can itself be a template and accept data from an additional yml file ([variants
 configuration](#variants-yml-config)).  Read below to get more information about
 each file and their required format.
 
+## Usage
+
 ### Template Functions
 
 The templater includes [sprig](https://github.com/Masterminds/sprig) (which is also
@@ -83,8 +85,6 @@ templated Dockerfile. Files in this directory which end in `.tpl` can then be
 included in your main Dockerfile template (or in the includes itself).
 This flag can be used multiple times to include multiple directories.
 
-## Usage
-
 ### Output
 
 Flag: `--out.dir`
@@ -98,13 +98,13 @@ Flag: `--out.fmt`
 Dockerfiles are written with the specified naming scheme to the output directory.
 The format takes a go template string that can contain variables defined in the variants.
 
-E.g. `Dockerfile_-_{{.image.name}}_-_{{.image.tag}}` allows you to 
-build the images like this:
+The default format (`Dockerfile.{{ .image.name }}.{{ .image.tag }}`) allows you to 
+build the images like this for example (assuming no dots in the name/tag):
 
 ```bash
 for DF in $(find dockerfiles -type f); do
-    NAME=$(echo ${DF} | awk -F '_-_' '{print $2}')
-    TAG=$(echo ${DF} | awk -F '_-_' '{print $3}')
+    NAME=$(echo ${DF} | awk -F '.' '{print $2}')
+    TAG=$(echo ${DF} | awk -F '.' '{print $3}')
     docker build . -f ${DF} -t ${NAME}:${TAG}
 done
 ```
@@ -143,7 +143,6 @@ Environment variable:
 ```bash
 export DTPL_DOCKERFILE_TPLDIR="some/dir other/dir"
 ```
-
 
 ### Docker
 
@@ -200,8 +199,8 @@ build-images:
     script:
         - |
             for DF in $(find dockerfiles -type f); do
-                NAME=$(echo ${DF} | awk -F '_-_' '{print $2}')
-                TAG=$(echo ${DF} | awk -F '_-_' '{print $3}')
+                NAME=$(echo ${DF} | awk -F '.' '{print $2}')
+                TAG=$(echo ${DF} | awk -F '.' '{print $3}')
                 /kaniko/executor \
                     --cleanup \
                     --dockerfile ${DF} \
