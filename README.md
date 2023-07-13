@@ -78,6 +78,7 @@ An optional directory which contains
 [includable templates](https://pkg.go.dev/text/template#hdr-Associated_templates) for your
 templated Dockerfile. Files in this directory which end in `.tpl` can then be
 included in your main Dockerfile template (or in the includes itself).
+This flag can be used multiple times to include multiple directories.
 
 ## Usage
 

@@ -164,10 +164,10 @@ func (t *templateData) Load() {
 
 // templater holds the main logic to render the Dockerfiles to the output directory
 type templater struct {
-	DockerfileTpl    *string
-	DockerfileTplDir *string
-	OutputDir        *string
-	OutputFmt        *string
+	DockerfileTpl     *string
+	DockerfileTplDirs []*string
+	OutputDir         *string
+	OutputFmt         *string
 
 	template *template.Template
 }
@@ -209,28 +209,26 @@ func (t *templater) Render(variants []*variant) {
 }
 
 // Loads the includable template definitions
-func (t *templater) initTemplateDir() {
-	if t.DockerfileTplDir == nil || *t.DockerfileTplDir == "" {
-		return
-	}
+func (t *templater) initTemplateDirs() {
+	for _, dir := range t.DockerfileTplDirs {
+		glob := filepath.Join(*dir, "*.tpl")
 
-	glob := filepath.Join(*t.DockerfileTplDir, "*.tpl")
-
-	var err error
-	t.template, err = t.template.ParseGlob(glob)
-	if err != nil {
-		logf(
-			levelError,
-			"Could not parse templates in '%s': %s",
-			*t.DockerfileTplDir, err,
-		)
+		var err error
+		t.template, err = t.template.ParseGlob(glob)
+		if err != nil {
+			logf(
+				levelError,
+				"Could not parse templates in '%s': %s",
+				*dir, err,
+			)
+		}
 	}
 }
 
 // Initializes the main Dockerfile template
 func (t *templater) initTemplate() {
 	t.template = parseTemplate(t.DockerfileTpl)
-	t.initTemplateDir()
+	t.initTemplateDirs()
 }
 
 // Creates the output directory
@@ -275,6 +273,18 @@ func (t *templater) Init() {
 // Type for the contents of the variants configuration file
 // This type of content does not have any restrictions
 type variantsTemplateData map[string]interface{}
+
+// Type which allows to specify a cli flag multiple times
+type arrayFlag []*string
+
+func (f *arrayFlag) Set(value string) error {
+	*f = append(*f, &value)
+	return nil
+}
+
+func (f *arrayFlag) String() string {
+	return ""
+}
 
 // If the application should log in verbose mode
 var verbose bool
@@ -452,12 +462,13 @@ func main() {
 		"Dockerfile.tpl",
 		"The template dockerile to use",
 	)
-	templater.DockerfileTplDir = flag.String(
+	var templateDirs arrayFlag
+	flag.Var(
+		&templateDirs,
 		"dockerfile.tpldir",
-		"",
-		"A directory containing templates to process (files must end in .tpl)",
+		"A directory containing templates to process (files must end in .tpl)"+
+			"can be specified multiple times",
 	)
-
 	flag.BoolVar(
 		&verbose,
 		"verbose",
@@ -473,6 +484,7 @@ func main() {
 	)
 
 	flag.Parse()
+	templater.DockerfileTplDirs = templateDirs
 
 	variants.Load()
 
