@@ -31,10 +31,10 @@ jobs:
       - name: Generate Dockerfiles
         run: | 
           go run main.go \
-            -dockerfile.tpl pkg/docker/Dockerfile.tpl \
-            -out.fmt "Dockerfile.{{ .image.name }}.{{ .image.tag }}" \
-            -variants pkg/docker/variants.yml.tpl \
-            -variants.cfg pkg/docker/variants.cfg.yml
+            --dockerfile.tpl pkg/docker/Dockerfile.tpl \
+            --out.fmt "Dockerfile.{{ .image.name }}.{{ .image.tag }}" \
+            --variants.def pkg/docker/variants.yml.tpl \
+            --variants.cfg pkg/docker/variants.cfg.yml
 
       - name: Upload Generated Dockerfiles
         uses: actions/upload-artifact@v3
