@@ -24,7 +24,7 @@ to extend the limited set of [go template functions](https://pkg.go.dev/text/tem
 
 ### Variants YML
 
-Flag: `-variants`
+Flag: `--variants.def`
 
 The main template configuration which will ultimately be passed to the Dockerfile
 template.
@@ -41,8 +41,8 @@ variants:
 
 #### Plain
 
-If you do not provide an additional variants configuration file (`-variants.cfg`)
-the variants file (`-variants`) is expected to be a valid yml file. There will
+If you do not provide an additional variants configuration file (`--variants.cfg`)
+the variants file (`--variants.def`) is expected to be a valid yml file. There will
 be no processing and the data read from the file is directly passed to the
 Dockerfile template.
 
@@ -50,14 +50,14 @@ Dockerfile template.
 
 As mentioned, the variants can itself be templated, this enables a high
 flexibility such as different combinations of package versions and reduces
-configuration duplications.  When the flag `-variants.cfg` is supplied, this
+configuration duplications.  When the flag `--variants.cfg` is supplied, this
 file will be interpreted as a template itself and be processed with the contents
 of the variants configuration before it will be fed into the Dockerfile
 template.
 
 ### Variants YML Config
 
-Flag: `-variants.cfg`
+Flag: `--variants.cfg`
 
 Supplying this file is optional but may help reducing configuration and duplication
 in the variants itself. This file has no constraints on it's content except that
@@ -65,14 +65,14 @@ it must be a valid yml file.
 
 ### Dockerfile
 
-Flag: `-dockerfile.tpl`
+Flag: `--dockerfile.tpl`
 
 The templated Dockerfile which accepts the configuration of the variants yml. It
 must be a valid go template.
 
 #### Template Directory
 
-Flag: `-dockerfile.tpldir`
+Flag: `--dockerfile.tpldir`
 
 An optional directory which contains
 [includable templates](https://pkg.go.dev/text/template#hdr-Associated_templates) for your
@@ -84,13 +84,13 @@ This flag can be used multiple times to include multiple directories.
 
 ### Output
 
-Flag: `-out.dir`
+Flag: `--out.dir`
 
 The generated Dockerfiles are written to the specified directory when rendered.
 
 ### Output Name Format
 
-Flag: `-out.fmt`
+Flag: `--out.fmt`
 
 Dockerfiles are written with the specified naming scheme to the output directory.
 The format takes a go template string that can contain variables defined in the variants.
@@ -110,10 +110,30 @@ done
 
 There are two additional flags which control the verbosity of the templater:
 
-- `-verbose`: Print debug messages
-- `-yml.debug`: Debug the handled yml structures, this may help debugging the
-                yml syntax, especially if the variants file is a template itself.
-                This flag must be used in conjunction with `-verbose`.
+- `--verbose`: Print debug messages
+- `--debug`: Debug the handled yml structures, this may help debugging the
+            yml syntax, especially if the variants file is a template itself.
+            This flag must be used in conjunction with `--verbose`.
+
+### Configuration File / Environment
+
+As an alternative to commandline flags you may also provide the relevant flags
+with either a configuration file (`--config`) or environment variables prefixed
+with `DTPL` and dots replaced with underscores.
+
+Example for `--dockerfile.tpldir`:
+
+```yml
+dockerfile:
+    tpldir:
+        - some/dir
+        - other/dir
+```
+
+```bash
+export DTPL_DOCKERFILE_TPLDIR="some/dir other/dir"
+```
+
 
 ### Docker
 
@@ -133,7 +153,7 @@ docker run -it --rm \
            -v ${PWD}:${PWD} -w ${PWD} \
        ghcr.io/bossm8/dockerfile-templater:latest \
            -dockerfile.tpl Dockerfile.tpl \
-           -variants variants.yml \
+           -variants.def variants.yml \
            -variants.cfg variants.cfg.yml
 ```
 
@@ -154,10 +174,10 @@ generate-dockerfiles:
         entrypoint: [""]
     script:
         - templater
-            -dockerfile.tpl Dockerfile.tpl
-            -variants variants.yml
-            -variants.cfg variants.cfg.yml
-            -out.dir ${CI_PROJECT_DIR}/dockerfiles
+            --dockerfile.tpl Dockerfile.tpl
+            --variants.def variants.yml
+            --variants.cfg variants.cfg.yml
+            --out.dir ${CI_PROJECT_DIR}/dockerfiles
     artifacts:
         paths:
             - dockerfiles
