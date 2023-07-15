@@ -35,8 +35,9 @@ var (
 )
 
 const (
-	dockerfileTplFlag    = "dockerfile.tpl"
-	dockerfileTplDirFlag = "dockerfile.tpldir"
+	dockerfileTplFlag     = "dockerfile.tpl"
+	dockerfileTplDirFlag  = "dockerfile.tpldir"
+	tplAdditionalVarsFlag = "dockerfile.var"
 
 	variantsDefFlag = "variants.def"
 	variantsCfgFlag = "variants.cfg"
@@ -62,6 +63,16 @@ func init() {
 	_ = viper.BindPFlag(
 		dockerfileTplDirFlag,
 		TemplaterCMD.PersistentFlags().Lookup(dockerfileTplDirFlag),
+	)
+
+	TemplaterCMD.PersistentFlags().StringToStringP(
+		tplAdditionalVarsFlag, "a", make(map[string]string, 0),
+		"Key=Value pairs of additional variables / variable overrides which "+
+			"should be available when rendendering the Dockerfile template",
+	)
+	_ = viper.BindPFlag(
+		tplAdditionalVarsFlag,
+		TemplaterCMD.PersistentFlags().Lookup(tplAdditionalVarsFlag),
 	)
 
 	TemplaterCMD.PersistentFlags().StringP(
@@ -123,9 +134,10 @@ func init() {
 
 func run(_ *cobra.Command, _ []string) {
 	templater := &templater{
-		DockerfileTpl:     viper.GetString(dockerfileTplFlag),
-		DockerfileTplDirs: viper.GetStringSlice(dockerfileTplDirFlag),
-		OutputDir:         viper.GetString(outDirFlag),
+		DockerfileTpl:       viper.GetString(dockerfileTplFlag),
+		DockerfileTplDirs:   viper.GetStringSlice(dockerfileTplDirFlag),
+		OutputDir:           viper.GetString(outDirFlag),
+		AdditionalVariables: viper.GetStringMapString(tplAdditionalVarsFlag),
 	}
 	variants := &variants{
 		VariantsTplFile: viper.GetString(variantsDefFlag),
@@ -180,6 +192,7 @@ func preRun(_ *cobra.Command, _ []string) {
 
 // The actual variant of Dockerfile which will be passed to the template.
 type variant struct {
+	Name  *string `yaml:"name"`
 	Image *struct {
 		Name *string `yaml:"name"`
 		Tag  *string `yaml:"tag"`
@@ -196,13 +209,17 @@ func (v *variant) Verify() {
 			"Variant missing required attribute '%s'\n"+
 				"Required Structure:\n\n"+
 				"variants:\n\n"+
-				"   - image:\n"+
+				"   - name: <VARIANT_NAME>\n"+
+				"     image:\n"+
 				"       name: <IMAGE_NAME>\n"+
 				"       tag: <IMAGE_TAG>\n\n",
 			attribute,
 		)
 	}
 
+	if v.Name == nil {
+		logMissingAttribute("name")
+	}
 	if v.Image == nil {
 		logMissingAttribute("image")
 	}
@@ -240,8 +257,16 @@ func (v *variant) OutputFile() string {
 }
 
 // Returns the variant as yml.
-func (v *variant) String() string {
-	res, err := yaml.Marshal(v)
+func (v *variant) String(dataOnly bool) string {
+	var res []byte
+	var err error
+
+	if !dataOnly {
+		res, err = yaml.Marshal(v)
+	} else {
+		res, err = yaml.Marshal(v.Data)
+	}
+
 	if err == nil {
 		return string(res)
 	}
@@ -274,6 +299,9 @@ func (t *variants) Verify() {
 
 // Outputs the processed variants as yml.
 func (t *variants) Debug() {
+	if !debug {
+		return
+	}
 	utils.Debug(
 		"Building Dockerfiles for variants:",
 	)
@@ -281,7 +309,7 @@ func (t *variants) Debug() {
 	yml := "\n"
 
 	for _, variant := range t.Variants {
-		yml += variant.String() + "\n"
+		yml += variant.String(false) + "\n"
 	}
 
 	log.Print(yml)
@@ -332,6 +360,8 @@ type templater struct {
 	DockerfileTplDirs []string
 	OutputDir         string
 
+	AdditionalVariables map[string]string
+
 	template *template.Template
 }
 
@@ -344,6 +374,65 @@ func (t *templater) Render(variants []*variant) {
 		variant.Data["image"] = map[string]interface{}{
 			"name": *variant.Image.Name,
 			"tag":  *variant.Image.Tag,
+		}
+		variant.Data["name"] = *variant.Name
+
+		// Add additional variables to the data passed to the template
+		for key, val := range t.AdditionalVariables {
+
+			// Check if a variant name prefix is specified in the key
+			// if yes, add it only to the variant with the matching name
+			// if no, add it to all
+			variantKey := strings.Split(key, ":")
+			if len(variantKey) == 2 {
+				if variantKey[0] != *variant.Name {
+					utils.Debug(
+						"Skip adding value '%s' to variant '%s' as names do not match",
+						key, *variant.Name,
+					)
+					continue
+				}
+			}
+
+			elem := variant.Data
+			keyPath := variantKey[len(variantKey)-1]
+			keyPathList := strings.Split(keyPath, ".")
+
+			// If there are multiple keys in the path we need to traverse the
+			// struct and find the one containing the last key.
+			// The algorithm below returns structs only and we want the struct
+			// containing the last key, which is why we omit it in the keyPath argument
+			if len(keyPathList) > 1 {
+				elem = utils.UpdateAndGetMapElementByPath(
+					elem,
+					keyPathList[:len(keyPathList)-1],
+				)
+			}
+
+			if elem == nil {
+				utils.Warn(
+					"Please check the path of the additional variable '%s'."+
+						"The key path '%s' is invalid for variant '%s'",
+					key, keyPath, *variant.Name,
+				)
+			}
+
+			lastKey := keyPathList[len(keyPathList)-1]
+
+			if curr, ok := elem[lastKey]; ok {
+				utils.Warn(
+					"Overriding variant value '%s' of '%s' with '%s'",
+					curr, keyPath, val,
+				)
+			}
+
+			utils.Debug("Adding variable '%s' with value '%s'", keyPath, val)
+			elem[lastKey] = val
+		}
+
+		if len(t.AdditionalVariables) > 0 && debug {
+			utils.Debug("Adjusted variant: \n\n")
+			log.Printf("%s\n", variant.String(true))
 		}
 
 		dockerfile := path.Join(

@@ -3,7 +3,9 @@ name: Build Templater Docker Images
 on:
   push:
     branches:
-      - main
+      - '*'
+    tags:
+      - '*'
 
 env:
   REGISTRY: ghcr.io
@@ -31,10 +33,7 @@ jobs:
       - name: Generate Dockerfiles
         run: | 
           go run main.go \
-            --dockerfile.tpl pkg/docker/Dockerfile.tpl \
-            --out.fmt "Dockerfile.{{ .image.name }}.{{ .image.tag }}" \
-            --variants.def pkg/docker/variants.yml.tpl \
-            --variants.cfg pkg/docker/variants.cfg.yml
+            --config dtpl.dev.yml
 
       - name: Upload Generated Dockerfiles
         uses: actions/upload-artifact@v3
@@ -42,14 +41,14 @@ jobs:
           name: dockerfiles
           path: dockerfiles
 
-  release-dockerimages:
+  build-dockerimages:
     runs-on: ubuntu-latest
 
     needs: build-dockerfiles
 
     strategy:
       matrix:
-        dockerfile: [Dockerfile.templater.debug, Dockerfile.templater.latest]
+        dockerfile: [Dockerfile.templater.dev, Dockerfile.templater.dev-debug]
 
     permissions:
       contents: read
@@ -84,3 +83,23 @@ jobs:
           context: ${{ github.workspace }}
           file: ${{ github.workspace }}/dockerfiles/${{ matrix.dockerfile }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+  test-dockerimages:
+    runs-on: ubuntu-latest  
+
+    needs: build-dockerimages
+
+    strategy:
+      matrix:
+        tags: [dev, dev-debug]
+
+    steps: 
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Test
+        run: |
+            docker run --rm \
+              -v ${{ github.workspace }}:${{ github.workspace }} -w ${{ github.workspace }} \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.tags }} \
+              --config dtpl.dev.yml -v -y

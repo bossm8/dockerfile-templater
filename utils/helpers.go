@@ -104,3 +104,28 @@ func LoadYMLFromFile(
 
 	LoadYMLFromBytes(yml, obj)
 }
+
+// Returns the map specified by path
+// If the path does not exist it will be created
+func UpdateAndGetMapElementByPath(
+	structure map[string]interface{},
+	keyPath []string,
+) map[string]interface{} {
+	if len(keyPath) == 0 {
+		return structure
+	}
+
+	var val interface{}
+	var ok bool
+
+	if val, ok = structure[keyPath[0]]; !ok {
+		val = make(map[string]interface{})
+		structure[keyPath[0]] = val
+	}
+
+	if nestedMap, ok := val.(map[string]interface{}); ok {
+		return UpdateAndGetMapElementByPath(nestedMap, keyPath[1:])
+	}
+
+	return nil
+}
