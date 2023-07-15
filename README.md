@@ -96,7 +96,7 @@ There are three different cases which may occur:
    `--dockerfile.var <VARIANT_NAME>:<KEY_PATH>=value`
 2. Override a variable on all variants. Here the variant name must be omitted.
    `--dockerfile.var <KEY_PATH>=value`
-3. Add a new variable. The same rules as above apply
+3. Add a new variable. The same rules as mentioned above apply.
 
 Notes:
  - You may add new hierarchy elements, they will be created on the fly
