@@ -85,6 +85,23 @@ templated Dockerfile. Files in this directory which end in `.tpl` can then be
 included in your main Dockerfile template (or in the includes itself).
 This flag can be used multiple times to include multiple directories.
 
+#### Additional Variables / Variable Overrides
+
+Flag: `--dockerfile.var`
+
+Additional variables or variable overrides to apply before rendering a Dockerfile.
+There are three different cases which may occur:
+
+1. Override a variable on a single variant only. In this case the variable needs to be prefixed with the variants.name.
+   `--dockerfile.var <VARIANT_NAME>:<KEY_PATH>=value`
+2. Override a variable on all variants. Here the variant name must be omitted.
+   `--dockerfile.var <KEY_PATH>=value`
+3. Add a new variable. The same rules as mentioned above apply.
+
+Notes:
+ - You may add new hierarchy elements, they will be created on the fly
+ - Existing key: value elements cannot be converted into a hierarchy
+
 ### Output
 
 Flag: `--out.dir`

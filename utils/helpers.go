@@ -12,12 +12,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Parses a template defined in a file
+// Parses a template defined in a file.
 func ParseTemplate(
 	file string,
 ) *template.Template {
-
 	tpl := template.New(filepath.Base(file)).Funcs(sprig.FuncMap())
+
 	var err error
 
 	path, err := filepath.Abs(file)
@@ -33,10 +33,11 @@ func ParseTemplate(
 			file, err,
 		)
 	}
+
 	return tpl
 }
 
-// Executes a template with the provided data
+// Executes a template with the provided data.
 func ExectuteTemplate(
 	tplData interface{},
 	tpl *template.Template,
@@ -47,12 +48,12 @@ func ExectuteTemplate(
 	)
 
 	var rendered bytes.Buffer
-	err := tpl.ExecuteTemplate(
+
+	if err := tpl.ExecuteTemplate(
 		&rendered,
 		tpl.Name(),
 		&tplData,
-	)
-	if err != nil {
+	); err != nil {
 		Error(
 			"Could not execute template '%s': %s",
 			tpl.Name(), err,
@@ -62,7 +63,7 @@ func ExectuteTemplate(
 	return rendered.Bytes()
 }
 
-// Loads yml data from a byte array
+// Loads yml data from a byte array.
 func LoadYMLFromBytes(
 	content []byte,
 	obj interface{},
@@ -72,6 +73,7 @@ func LoadYMLFromBytes(
 			fmt.Sprintf("Loading yaml structure: \n\n%s\n\n", string(content)),
 		)
 	}
+
 	if err := yaml.Unmarshal(content, obj); err != nil {
 		Error(
 			"Failed to parse yaml: %s", err,
@@ -79,7 +81,7 @@ func LoadYMLFromBytes(
 	}
 }
 
-// Loads yml data from a file
+// Loads yml data from a file.
 func LoadYMLFromFile(
 	filename string,
 	obj interface{},
@@ -101,4 +103,30 @@ func LoadYMLFromFile(
 	}
 
 	LoadYMLFromBytes(yml, obj)
+}
+
+// Returns the map specified by path
+// If the path does not exist it will be created
+// Returns nil if the element referenced by path is not a map
+func UpdateAndGetMapElementByPath(
+	structure map[string]interface{},
+	keyPath []string,
+) map[string]interface{} {
+	if len(keyPath) == 0 {
+		return structure
+	}
+
+	var val interface{}
+	var ok bool
+
+	if val, ok = structure[keyPath[0]]; !ok {
+		val = make(map[string]interface{})
+		structure[keyPath[0]] = val
+	}
+
+	if nestedMap, ok := val.(map[string]interface{}); ok {
+		return UpdateAndGetMapElementByPath(nestedMap, keyPath[1:])
+	}
+
+	return nil
 }

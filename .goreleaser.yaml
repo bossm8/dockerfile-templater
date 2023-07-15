@@ -1,0 +1,207 @@
+project_name: dockerfile-templater
+
+before:
+  hooks:
+    - go mod tidy
+    - go run main.go --config dtpl.yml
+
+builds:
+  - binary: dockerfile-templater
+    ldflags: -X github.com/bossm8/dockerfile-templater/cmd.version={{ .Version }}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - '386'
+      - arm
+      - arm64
+    goarm:
+      - '7'
+
+archives:
+  - format: tar.gz
+    # this name template makes the OS and Arch compatible with the results of uname.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+docker_manifests:
+  - name_template: 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}'
+    image_templates:
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-amd64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-arm64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-armv7'
+
+  - name_template: 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-debug'
+    image_templates:
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-amd64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-arm64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-armv7'
+
+  - name_template: 'ghcr.io/bossm8/dockerfile-templater:latest'
+    image_templates:
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-amd64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-arm64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-armv7'
+
+  - name_template: 'ghcr.io/bossm8/dockerfile-templater:debug'
+    image_templates:
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-amd64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-arm64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-armv7'
+
+dockers:
+  - use: buildx
+    goos: linux
+    goarch: amd64
+    dockerfile: dockerfiles/Dockerfile.templater.latest
+    image_templates:
+      - 'ghcr.io/bossm8/dockerfile-templater:latest-amd64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-amd64'
+    build_flag_templates:
+      - '--pull'
+      # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
+      - '--label=org.opencontainers.image.title={{ .ProjectName }}'
+      - '--label=org.opencontainers.image.description=Generate Dockerfiles in different variants from a template'
+      - '--label=org.opencontainers.image.source={{ .GitURL }}'
+      - '--label=org.opencontainers.image.url={{ .GitURL }}'
+      - '--label=org.opencontainers.image.documentation={{ .GitURL }}'
+      - '--label=org.opencontainers.image.created={{ .Date }}'
+      - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
+      - '--label=org.opencontainers.image.version={{ .Version }}'
+      - '--build-arg=VERSION={{ .Version }}'
+      - '--platform=linux/amd64'
+
+  - use: buildx
+    goos: linux
+    goarch: arm64
+    dockerfile: dockerfiles/Dockerfile.templater.latest
+    image_templates:
+      - 'ghcr.io/bossm8/dockerfile-templater:latest-arm64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-arm64'
+    build_flag_templates:
+      - '--pull'
+      - '--label=org.opencontainers.image.title={{ .ProjectName }}'
+      - '--label=org.opencontainers.image.description=Generate Dockerfiles in different variants from a template'
+      - '--label=org.opencontainers.image.source={{ .GitURL }}'
+      - '--label=org.opencontainers.image.url={{ .GitURL }}'
+      - '--label=org.opencontainers.image.documentation={{ .GitURL }}'
+      - '--label=org.opencontainers.image.created={{ .Date }}'
+      - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
+      - '--label=org.opencontainers.image.version={{ .Version }}'
+      - '--build-arg=VERSION={{ .Version }}'
+      - '--platform=linux/arm64'
+
+  - use: buildx
+    goos: linux
+    goarch: arm
+    goarm: '7'
+    dockerfile: dockerfiles/Dockerfile.templater.latest
+    image_templates:
+      - 'ghcr.io/bossm8/dockerfile-templater:latest-armv7'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-armv7'
+    build_flag_templates:
+      - '--pull'
+      - '--label=org.opencontainers.image.title={{ .ProjectName }}'
+      - '--label=org.opencontainers.image.description=Generate Dockerfiles in different variants from a template'
+      - '--label=org.opencontainers.image.source={{ .GitURL }}'
+      - '--label=org.opencontainers.image.url={{ .GitURL }}'
+      - '--label=org.opencontainers.image.documentation={{ .GitURL }}'
+      - '--label=org.opencontainers.image.created={{ .Date }}'
+      - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
+      - '--label=org.opencontainers.image.version={{ .Version }}'
+      - '--build-arg=VERSION={{ .Version }}'
+      - '--platform=linux/arm/v7'
+
+  - use: buildx
+    goos: linux
+    goarch: amd64
+    dockerfile: dockerfiles/Dockerfile.templater.debug
+    image_templates:
+      - 'ghcr.io/bossm8/dockerfile-templater:debug-amd64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-debug-amd64'
+    build_flag_templates:
+      - '--pull'
+      - '--label=org.opencontainers.image.title={{ .ProjectName }}'
+      - '--label=org.opencontainers.image.description=Generate Dockerfiles in different variants from a template'
+      - '--label=org.opencontainers.image.source={{ .GitURL }}'
+      - '--label=org.opencontainers.image.url={{ .GitURL }}'
+      - '--label=org.opencontainers.image.documentation={{ .GitURL }}'
+      - '--label=org.opencontainers.image.created={{ .Date }}'
+      - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
+      - '--label=org.opencontainers.image.version={{ .Version }}'
+      - '--build-arg=VERSION={{ .Version }}'
+      - '--platform=linux/amd64'
+
+  - use: buildx
+    goos: linux
+    goarch: arm64
+    dockerfile: dockerfiles/Dockerfile.templater.debug
+    image_templates:
+      - 'ghcr.io/bossm8/dockerfile-templater:debug-arm64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-debug-arm64'
+    build_flag_templates:
+      - '--pull'
+      - '--label=org.opencontainers.image.title={{ .ProjectName }}'
+      - '--label=org.opencontainers.image.description=Generate Dockerfiles in different variants from a template'
+      - '--label=org.opencontainers.image.source={{ .GitURL }}'
+      - '--label=org.opencontainers.image.url={{ .GitURL }}'
+      - '--label=org.opencontainers.image.documentation={{ .GitURL }}'
+      - '--label=org.opencontainers.image.created={{ .Date }}'
+      - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
+      - '--label=org.opencontainers.image.version={{ .Version }}'
+      - '--build-arg=VERSION={{ .Version }}'
+      - '--platform=linux/arm64'
+
+  - use: buildx
+    goos: linux
+    goarch: arm
+    goarm: '7'
+    dockerfile: dockerfiles/Dockerfile.templater.debug
+    image_templates:
+      - 'ghcr.io/bossm8/dockerfile-templater:debug-armv7'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-debug-armv7'
+    build_flag_templates:
+      - '--pull'
+      - '--label=org.opencontainers.image.title={{ .ProjectName }}'
+      - '--label=org.opencontainers.image.description=Generate Dockerfiles in different variants from a template'
+      - '--label=org.opencontainers.image.source={{ .GitURL }}'
+      - '--label=org.opencontainers.image.url={{ .GitURL }}'
+      - '--label=org.opencontainers.image.documentation={{ .GitURL }}'
+      - '--label=org.opencontainers.image.created={{ .Date }}'
+      - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
+      - '--label=org.opencontainers.image.version={{ .Version }}'
+      - '--build-arg=VERSION={{ .Version }}'
+      - '--platform=linux/arm/v7'
+
+# The lines beneath this are called `modelines`. See `:help modeline`
+# Feel free to remove those if you don't want/use them.
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj

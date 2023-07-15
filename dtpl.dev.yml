@@ -1,0 +1,11 @@
+dockerfile:
+  tpl: pkg/docker/Dockerfile.tpl
+  tpldir: 
+    - pkg/docker/includes
+  var: 
+    dev: true
+    debug:image.tag: dev-debug
+    scratch:image.tag: dev
+variants:
+  def: pkg/docker/variants.yml.tpl
+  cfg: pkg/docker/variants.cfg.yml
