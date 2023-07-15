@@ -4,17 +4,9 @@ on:
   push:
     tags:
       - '*'
-  workflow_run:
-    workflows: ["Build Templater Docker Images"]
-    types:
-      - completed
 
 jobs:
   release:
-
-    if: |
-      startsWith(github.event.ref, 'refs/tags/') &&
-      github.event.workflow_run.conclusion == 'success'
 
     name: Release version
     runs-on: ubuntu-latest
