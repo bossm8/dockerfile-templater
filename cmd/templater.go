@@ -278,6 +278,70 @@ func (v *variant) String(dataOnly bool) string {
 	return ""
 }
 
+// Adds the variables to the data passed to the template
+func (v *variant) UpdateData(variables map[string]string) {
+	for key, val := range variables {
+
+		// Check if a variant name prefix is specified in the key
+		// if yes, add it only to the variant with the matching name
+		// if no, add it to all
+		variantKey := strings.Split(key, ":")
+		if len(variantKey) == 2 {
+			if variantKey[0] != *v.Name {
+				utils.Debug(
+					"Skip adding value '%s' to variant '%s' as names do not match",
+					key, *v.Name,
+				)
+				continue
+			}
+		}
+
+		elem := v.Data
+		keyPath := variantKey[len(variantKey)-1]
+		keyPathList := strings.Split(keyPath, ".")
+
+		// If there are multiple keys in the path we need to traverse the
+		// struct and find the one containing the last key.
+		// The algorithm below returns structs only and we want the struct
+		// containing the last key, which is why we omit it in the keyPath argument
+		if len(keyPathList) > 1 {
+			elem = utils.UpdateAndGetMapElementByPath(
+				elem,
+				keyPathList[:len(keyPathList)-1],
+			)
+		}
+
+		if elem == nil {
+			utils.Warn(
+				"Please check the path of the additional variable '%s'."+
+					"The key path '%s' is invalid for variant '%s'",
+				key, keyPath, *v.Name,
+			)
+		}
+
+		lastKey := keyPathList[len(keyPathList)-1]
+
+		if curr, ok := elem[lastKey]; ok {
+			utils.Warn(
+				"Overriding variant value '%s' of '%s' with '%s'",
+				curr, keyPath, val,
+			)
+		}
+
+		utils.Debug("Adding variable '%s' with value '%s'", keyPath, val)
+		elem[lastKey] = val
+	}
+}
+
+// Adds the image object to the Data struct which will be passed to the template
+func (v *variant) SetDataImage() {
+	v.Data["image"] = map[string]interface{}{
+		"name": *v.Image.Name,
+		"tag":  *v.Image.Tag,
+	}
+	v.Data["name"] = *v.Name
+}
+
 // The container for the variants yml.
 type variants struct {
 	Variants []*variant `yaml:"variants"`
@@ -368,67 +432,9 @@ type templater struct {
 // Renders the Dockerfiles to the output directory.
 func (t *templater) Render(variants []*variant) {
 	for _, variant := range variants {
-		// Re-add the image struct with lowercase values since otherwise they
-		// are not accessible or when added with the Image struct itself
-		// only under .Name and .Tag
-		variant.Data["image"] = map[string]interface{}{
-			"name": *variant.Image.Name,
-			"tag":  *variant.Image.Tag,
-		}
-		variant.Data["name"] = *variant.Name
 
-		// Add additional variables to the data passed to the template
-		for key, val := range t.AdditionalVariables {
-
-			// Check if a variant name prefix is specified in the key
-			// if yes, add it only to the variant with the matching name
-			// if no, add it to all
-			variantKey := strings.Split(key, ":")
-			if len(variantKey) == 2 {
-				if variantKey[0] != *variant.Name {
-					utils.Debug(
-						"Skip adding value '%s' to variant '%s' as names do not match",
-						key, *variant.Name,
-					)
-					continue
-				}
-			}
-
-			elem := variant.Data
-			keyPath := variantKey[len(variantKey)-1]
-			keyPathList := strings.Split(keyPath, ".")
-
-			// If there are multiple keys in the path we need to traverse the
-			// struct and find the one containing the last key.
-			// The algorithm below returns structs only and we want the struct
-			// containing the last key, which is why we omit it in the keyPath argument
-			if len(keyPathList) > 1 {
-				elem = utils.UpdateAndGetMapElementByPath(
-					elem,
-					keyPathList[:len(keyPathList)-1],
-				)
-			}
-
-			if elem == nil {
-				utils.Warn(
-					"Please check the path of the additional variable '%s'."+
-						"The key path '%s' is invalid for variant '%s'",
-					key, keyPath, *variant.Name,
-				)
-			}
-
-			lastKey := keyPathList[len(keyPathList)-1]
-
-			if curr, ok := elem[lastKey]; ok {
-				utils.Warn(
-					"Overriding variant value '%s' of '%s' with '%s'",
-					curr, keyPath, val,
-				)
-			}
-
-			utils.Debug("Adding variable '%s' with value '%s'", keyPath, val)
-			elem[lastKey] = val
-		}
+		variant.SetDataImage()
+		variant.UpdateData(t.AdditionalVariables)
 
 		if len(t.AdditionalVariables) > 0 && debug {
 			utils.Debug("Adjusted variant: \n\n")
