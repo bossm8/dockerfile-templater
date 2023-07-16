@@ -3,7 +3,8 @@ variants:
 {{- range .images }}
   {{- $i := . }}
   {{ range .versions }}
-  - image:
+  - name: "{{ $i.name }}-{{ .version }}"
+    image:
       name: {{ $i.name }}
       tag: {{ .version }}
     from_image: {{ $.from_image }}

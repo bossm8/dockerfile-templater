@@ -1,6 +1,7 @@
 variants:
 
-  - image:
+  - name: example
+    image:
       name: ubuntu
       tag: unmodified
     from_image: ubuntu:latest
