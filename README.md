@@ -230,7 +230,7 @@ build-images:
 
 ### Binary
 
-TBD
+Find binaries for your OS in the [releases](https://github.com/bossm8/dockerfile-templater/releases)
 
 ## Examples
 
