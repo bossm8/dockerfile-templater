@@ -94,8 +94,10 @@ Additional variables or variable overrides to apply before rendering a Dockerfil
 There are three different cases which may occur:
 
 1. Override a variable on a single variant only. In this case the variable needs to be prefixed with the variants.name.
+
     `--dockerfile.var <VARIANT_NAME>:<KEY_PATH>=value`
 2. Override a variable on all variants. Here the variant name must be omitted.
+    
     `--dockerfile.var <KEY_PATH>=value`
 3. Add a new variable. The same rules as mentioned above apply.
 
@@ -161,6 +163,11 @@ Environment variable:
 ```bash
 export DTPL_DOCKERFILE_TPLDIR="some/dir other/dir"
 ```
+
+Notes: 
+ - For the flag `dockerfile.var` the environment variable must be specified as json:
+    
+    `DTPL_DOCKERFILE_VAR='{"key1": "value1"}'`
 
 ### Docker
 
