@@ -38,7 +38,8 @@ It **must** contain the following structure:
 
 ```yaml
 variants:
-    - image:
+    - name: <unique variant name>
+      image:
         name: <name which you will use for the image>
         tag: <tag which you will use for the image>
       <custom content free of constraints>
@@ -93,9 +94,9 @@ Additional variables or variable overrides to apply before rendering a Dockerfil
 There are three different cases which may occur:
 
 1. Override a variable on a single variant only. In this case the variable needs to be prefixed with the variants.name.
-   `--dockerfile.var <VARIANT_NAME>:<KEY_PATH>=value`
+    `--dockerfile.var <VARIANT_NAME>:<KEY_PATH>=value`
 2. Override a variable on all variants. Here the variant name must be omitted.
-   `--dockerfile.var <KEY_PATH>=value`
+    `--dockerfile.var <KEY_PATH>=value`
 3. Add a new variable. The same rules as mentioned above apply.
 
 Notes:
@@ -230,7 +231,7 @@ build-images:
 
 ### Binary
 
-Find binaries for your OS in the [releases](https://github.com/bossm8/dockerfile-templater/releases)
+Find binaries for your OS in the [releases](https://github.com/bossm8/dockerfile-templater/releases).
 
 ## Examples
 
