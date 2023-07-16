@@ -107,7 +107,7 @@ func LoadYMLFromFile(
 
 // Returns the map specified by path
 // If the path does not exist it will be created
-// Returns nil if the element referenced by path is not a map
+// Returns nil if the element referenced by path is not a map.
 func UpdateAndGetMapElementByPath(
 	structure map[string]interface{},
 	keyPath []string,

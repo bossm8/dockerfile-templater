@@ -10,6 +10,11 @@ jobs:
 
     name: Release version
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
     env:
       GO_VERSION: '1.20'
       CGO_ENABLED: 0

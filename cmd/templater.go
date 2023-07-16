@@ -278,7 +278,7 @@ func (v *variant) String(dataOnly bool) string {
 	return ""
 }
 
-// Adds the variables to the data passed to the template
+// Adds the variables to the data passed to the template.
 func (v *variant) UpdateData(variables map[string]string) {
 	for key, val := range variables {
 
@@ -333,7 +333,7 @@ func (v *variant) UpdateData(variables map[string]string) {
 	}
 }
 
-// Adds the image object to the Data struct which will be passed to the template
+// Adds the image object to the Data struct which will be passed to the template.
 func (v *variant) SetDataImage() {
 	v.Data["image"] = map[string]interface{}{
 		"name": *v.Image.Name,
