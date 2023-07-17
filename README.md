@@ -101,6 +101,18 @@ There are three different cases which may occur:
     `--dockerfile.var <KEY_PATH>=value`
 3. Add a new variable. The same rules as mentioned above apply.
 
+Examples:
+
+- Override the image tag of a variant named xy:
+
+    `--dockerfile.var xy:image.tag=latest`
+- Override the image name for all variants:
+
+    `--dockerfile.var image.name=myimage`
+- Add new elements with env:
+
+    `DTPL_DOCKERFILE_VAR='{"dev.debug": true, "dev.verbose": true}' dockerfile-templater (...)`
+
 Notes:
  - You may add new hierarchy elements, they will be created on the fly
  - Existing key: value elements cannot be converted into a hierarchy
