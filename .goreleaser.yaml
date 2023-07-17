@@ -61,9 +61,9 @@ docker_manifests:
 
   - name_template: 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-debug'
     image_templates:
-      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-amd64'
-      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-arm64'
-      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-armv7'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-debug-amd64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-debug-arm64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-debug-armv7'
 
   - name_template: 'ghcr.io/bossm8/dockerfile-templater:latest'
     image_templates:
@@ -73,9 +73,9 @@ docker_manifests:
 
   - name_template: 'ghcr.io/bossm8/dockerfile-templater:debug'
     image_templates:
-      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-amd64'
-      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-arm64'
-      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-armv7'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-debug-amd64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-debug-arm64'
+      - 'ghcr.io/bossm8/dockerfile-templater:{{ .Version }}-debug-armv7'
 
 dockers:
   - use: buildx
