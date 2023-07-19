@@ -89,14 +89,15 @@ dockers:
       - '--pull'
       # https://github.com/opencontainers/image-spec/blob/main/annotations.md#pre-defined-annotation-keys
       - '--label=org.opencontainers.image.title={{ .ProjectName }}'
-      - '--label=org.opencontainers.image.description=Generate Dockerfiles in different variants from a template'
+      - '--label=org.opencontainers.image.description="Generate Dockerfiles in different variants from a template"'
       - '--label=org.opencontainers.image.source={{ .GitURL }}'
       - '--label=org.opencontainers.image.url={{ .GitURL }}'
       - '--label=org.opencontainers.image.documentation=https://github.com/bossm8/dockerfile-templater/tree/main'
       - '--label=org.opencontainers.image.created={{ .Date }}'
       - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
       - '--label=org.opencontainers.image.version={{ .Version }}'
-      - '--build-arg=VERSION={{ .Version }}'
+      - '--label=org.opencontainers.image.licenses="BSD-3-Clause license"'
+      - '--label=org.opencontainers.image.authors=bossm8'
       - '--platform=linux/amd64'
 
   - use: buildx
@@ -109,14 +110,15 @@ dockers:
     build_flag_templates:
       - '--pull'
       - '--label=org.opencontainers.image.title={{ .ProjectName }}'
-      - '--label=org.opencontainers.image.description=Generate Dockerfiles in different variants from a template'
+      - '--label=org.opencontainers.image.description="Generate Dockerfiles in different variants from a template"'
       - '--label=org.opencontainers.image.source={{ .GitURL }}'
       - '--label=org.opencontainers.image.url={{ .GitURL }}'
       - '--label=org.opencontainers.image.documentation=https://github.com/bossm8/dockerfile-templater/tree/main'
       - '--label=org.opencontainers.image.created={{ .Date }}'
       - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
       - '--label=org.opencontainers.image.version={{ .Version }}'
-      - '--build-arg=VERSION={{ .Version }}'
+      - '--label=org.opencontainers.image.licenses="BSD-3-Clause license"'
+      - '--label=org.opencontainers.image.authors=bossm8'
       - '--platform=linux/arm64'
 
   - use: buildx
@@ -130,14 +132,15 @@ dockers:
     build_flag_templates:
       - '--pull'
       - '--label=org.opencontainers.image.title={{ .ProjectName }}'
-      - '--label=org.opencontainers.image.description=Generate Dockerfiles in different variants from a template'
+      - '--label=org.opencontainers.image.description="Generate Dockerfiles in different variants from a template"'
       - '--label=org.opencontainers.image.source={{ .GitURL }}'
       - '--label=org.opencontainers.image.url={{ .GitURL }}'
       - '--label=org.opencontainers.image.documentation=https://github.com/bossm8/dockerfile-templater/tree/main'
       - '--label=org.opencontainers.image.created={{ .Date }}'
       - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
       - '--label=org.opencontainers.image.version={{ .Version }}'
-      - '--build-arg=VERSION={{ .Version }}'
+      - '--label=org.opencontainers.image.licenses="BSD-3-Clause license"'
+      - '--label=org.opencontainers.image.authors=bossm8'
       - '--platform=linux/arm/v7'
 
   - use: buildx
@@ -150,14 +153,15 @@ dockers:
     build_flag_templates:
       - '--pull'
       - '--label=org.opencontainers.image.title={{ .ProjectName }}'
-      - '--label=org.opencontainers.image.description=Generate Dockerfiles in different variants from a template'
+      - '--label=org.opencontainers.image.description="Generate Dockerfiles in different variants from a template"'
       - '--label=org.opencontainers.image.source={{ .GitURL }}'
       - '--label=org.opencontainers.image.url={{ .GitURL }}'
       - '--label=org.opencontainers.image.documentation=https://github.com/bossm8/dockerfile-templater/tree/main'
       - '--label=org.opencontainers.image.created={{ .Date }}'
       - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
       - '--label=org.opencontainers.image.version={{ .Version }}'
-      - '--build-arg=VERSION={{ .Version }}'
+      - '--label=org.opencontainers.image.licenses="BSD-3-Clause license"'
+      - '--label=org.opencontainers.image.authors=bossm8'
       - '--platform=linux/amd64'
 
   - use: buildx
@@ -170,14 +174,15 @@ dockers:
     build_flag_templates:
       - '--pull'
       - '--label=org.opencontainers.image.title={{ .ProjectName }}'
-      - '--label=org.opencontainers.image.description=Generate Dockerfiles in different variants from a template'
+      - '--label=org.opencontainers.image.description="Generate Dockerfiles in different variants from a template"'
       - '--label=org.opencontainers.image.source={{ .GitURL }}'
       - '--label=org.opencontainers.image.url={{ .GitURL }}'
       - '--label=org.opencontainers.image.documentation=https://github.com/bossm8/dockerfile-templater/tree/main'
       - '--label=org.opencontainers.image.created={{ .Date }}'
       - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
       - '--label=org.opencontainers.image.version={{ .Version }}'
-      - '--build-arg=VERSION={{ .Version }}'
+      - '--label=org.opencontainers.image.licenses="BSD-3-Clause license"'
+      - '--label=org.opencontainers.image.authors=bossm8'
       - '--platform=linux/arm64'
 
   - use: buildx
@@ -191,14 +196,15 @@ dockers:
     build_flag_templates:
       - '--pull'
       - '--label=org.opencontainers.image.title={{ .ProjectName }}'
-      - '--label=org.opencontainers.image.description=Generate Dockerfiles in different variants from a template'
+      - '--label=org.opencontainers.image.description="Generate Dockerfiles in different variants from a template"'
       - '--label=org.opencontainers.image.source={{ .GitURL }}'
       - '--label=org.opencontainers.image.url={{ .GitURL }}'
       - '--label=org.opencontainers.image.documentation=https://github.com/bossm8/dockerfile-templater/tree/main'
       - '--label=org.opencontainers.image.created={{ .Date }}'
       - '--label=org.opencontainers.image.revision={{ .FullCommit }}'
       - '--label=org.opencontainers.image.version={{ .Version }}'
-      - '--build-arg=VERSION={{ .Version }}'
+      - '--label=org.opencontainers.image.licenses="BSD-3-Clause license"'
+      - '--label=org.opencontainers.image.authors=bossm8'
       - '--platform=linux/arm/v7'
 
 # The lines beneath this are called `modelines`. See `:help modeline`
