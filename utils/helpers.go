@@ -39,7 +39,7 @@ func ParseTemplate(
 
 // Executes a template with the provided data.
 func ExectuteTemplate(
-	tplData interface{},
+	tplData map[string]interface{},
 	tpl *template.Template,
 ) []byte {
 	Debug(
