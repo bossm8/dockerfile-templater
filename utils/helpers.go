@@ -9,7 +9,7 @@ import (
 
 	"github.com/Masterminds/sprig"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // Parses a template defined in a file.
@@ -38,7 +38,7 @@ func ParseTemplate(
 }
 
 // Executes a template with the provided data.
-func ExectuteTemplate(
+func ExecuteTemplate(
 	tplData map[string]interface{},
 	tpl *template.Template,
 ) []byte {

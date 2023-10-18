@@ -393,7 +393,7 @@ func (t *variants) loadFromTemplate() {
 	utils.LoadYMLFromFile(t.VariantsCfgFile, &vc)
 
 	tpl := utils.ParseTemplate(t.VariantsTplFile)
-	res := utils.ExectuteTemplate(vc, tpl)
+	res := utils.ExecuteTemplate(vc, tpl)
 
 	utils.LoadYMLFromBytes(res, t)
 }
@@ -451,7 +451,7 @@ func (t *templater) Render(variants []*variant) {
 			utils.Error("%s", err)
 		}
 
-		rendered := utils.ExectuteTemplate(
+		rendered := utils.ExecuteTemplate(
 			variant.Data,
 			t.template,
 		)
