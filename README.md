@@ -27,6 +27,14 @@ The templater includes [sprig](https://github.com/Masterminds/sprig) (which is a
 included in [helm](https://helm.sh/docs/chart_template_guide/functions_and_pipelines/))
 to extend the limited set of [go template functions](https://pkg.go.dev/text/template#hdr-Functions).
 
+It also contains a limited set of custom functions:
+
+- `toYaml`
+    Paste yaml structures into templates:
+    ```yaml
+    values: {{ toYaml .data | nindent 2 }}
+    ```
+
 ### Variants YML
 
 Flag: `--variants.def`
@@ -244,8 +252,8 @@ build-images:
                     --destination ${NAME}:${TAG}
             done
     needs:
-        job: generate-dockerfiles
-        artifacts: true
+        - job: generate-dockerfiles
+          artifacts: true
 ```
 
 ### Binary

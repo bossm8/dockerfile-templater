@@ -12,11 +12,23 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// https://github.com/technosophos/k8s-helm/commit/431cc46cad3ae5248e32df1f6c44f2f4ce5547ba
+func toYaml(v interface{}) string {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
 // Parses a template defined in a file.
 func ParseTemplate(
 	file string,
 ) *template.Template {
-	tpl := template.New(filepath.Base(file)).Funcs(sprig.FuncMap())
+	tpl := template.New(filepath.Base(file)).Funcs(
+		template.FuncMap{
+			"toYaml": toYaml,
+		}).Funcs(sprig.FuncMap())
 
 	var err error
 
