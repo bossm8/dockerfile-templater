@@ -1,8 +1,5 @@
 # Dockerfile Templater
 
-***This software is not currently considered stable and may be subject to change
-until this notice is removed***
-
 Simple GO utility to generate Dockerfiles from a template accepting yml data.
 
 ## Introduction
