@@ -39,8 +39,9 @@ const (
 	dockerfileTplDirFlag  = "dockerfile.tpldir"
 	tplAdditionalVarsFlag = "dockerfile.var"
 
-	variantsDefFlag = "variants.def"
-	variantsCfgFlag = "variants.cfg"
+	variantsDefFlag    = "variants.def"
+	variantsCfgFlag    = "variants.cfg"
+	variantsTplDirFlag = "variants.tpldir"
 
 	outDirFlag = "out.dir"
 	outFmtFlag = "out.fmt"
@@ -95,6 +96,15 @@ func init() {
 		TemplaterCMD.PersistentFlags().Lookup(variantsCfgFlag),
 	)
 
+	TemplaterCMD.PersistentFlags().StringArrayP(
+		variantsTplDirFlag, "p", make([]string, 0),
+		"Path to a directory containing includable template definitions",
+	)
+	_ = viper.BindPFlag(
+		variantsTplDirFlag,
+		TemplaterCMD.PersistentFlags().Lookup(variantsTplDirFlag),
+	)
+
 	TemplaterCMD.PersistentFlags().StringP(
 		outDirFlag, "o", "dockerfiles",
 		"Directory to write generated Dockerfiles to",
@@ -142,6 +152,7 @@ func run(_ *cobra.Command, _ []string) {
 	variants := &variants{
 		VariantsTplFile: viper.GetString(variantsDefFlag),
 		VariantsCfgFile: viper.GetString(variantsCfgFlag),
+		VariantsTplDirs: viper.GetStringSlice(variantsTplDirFlag),
 	}
 
 	variants.Load()
@@ -348,6 +359,7 @@ type variants struct {
 
 	VariantsCfgFile string
 	VariantsTplFile string
+	VariantsTplDirs []string
 }
 
 // Verifies if the variants configuration is valid.
@@ -393,6 +405,8 @@ func (t *variants) loadFromTemplate() {
 	utils.LoadYMLFromFile(t.VariantsCfgFile, &vc)
 
 	tpl := utils.ParseTemplate(t.VariantsTplFile)
+	tpl = utils.InitTemplateDirs(tpl, t.VariantsTplDirs)
+
 	res := utils.ExecuteTemplate(vc, tpl)
 
 	utils.LoadYMLFromBytes(res, t)
@@ -468,34 +482,10 @@ func (t *templater) Render(variants []*variant) {
 	}
 }
 
-// Loads the includable template definitions.
-func (t *templater) initTemplateDirs() {
-	for _, dir := range t.DockerfileTplDirs {
-		utils.Debug(
-			"Including templates from '%s'", dir,
-		)
-
-		path, err := filepath.Abs(dir)
-		if err != nil {
-			utils.Error("%s", err)
-		}
-
-		glob := filepath.Join(path, "*.tpl")
-
-		t.template, err = t.template.ParseGlob(glob)
-		if err != nil {
-			utils.Error(
-				"Could not parse templates in '%s': %s",
-				dir, err,
-			)
-		}
-	}
-}
-
 // Initializes the main Dockerfile template.
 func (t *templater) initTemplate() {
 	t.template = utils.ParseTemplate(t.DockerfileTpl)
-	t.initTemplateDirs()
+	t.template = utils.InitTemplateDirs(t.template, t.DockerfileTplDirs)
 }
 
 // Creates the output directory.

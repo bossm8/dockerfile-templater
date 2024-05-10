@@ -1,0 +1,5 @@
+variants:
+  def: examples/combinations/variants.yml.tpl
+  cfg: examples/combinations/variants.cfg.yml
+dockerfile:
+  tpl: examples/combinations/Dockerfile.tpl

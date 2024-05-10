@@ -4,10 +4,10 @@ Simple GO utility to generate Dockerfiles from a template accepting yml data.
 
 ## Introduction
 
-This utility helps deduplicating code by generating multiple Dockerfiles 
+This utility helps deduplicating code by generating multiple Dockerfiles
 from a single template. Making multi-variant image builds easier and faster.
 
-The templater is able to generate Dockerfiles in different variants from a 
+The templater is able to generate Dockerfiles in different variants from a
 [go templated](https://pkg.go.dev/text/template) Dockerfile (the templater includes
 [sprig](https://github.com/Masterminds/sprig) to provide more template
 functionality). The data passed to the template is read from a yml configuration
@@ -28,8 +28,31 @@ Additionally it also brings the following custom functions:
 
 - `toYaml`
     Paste yaml structures into templates:
+
     ```yaml
     values: {{ toYaml .data | nindent 2 }}
+    ```
+
+- `include`
+    Borrowed from Helm. Allows to use the output of a template as a variable
+
+    ```yaml
+    values: {{ include "other-template" $value | indent 2 }}
+    ```
+
+- `tpl`
+    Also borrowed from Helm. Allows to evaluate a string as a template
+
+    ```yaml
+    # values
+    template: "{{ .Values.name }}"
+    name: "Tom"
+
+    # template
+    {{ tpl .Values.template . }}
+
+    # output
+    Tom
     ```
 
 ### Variants YML
@@ -83,11 +106,11 @@ must be a valid go template.
 
 #### Template Directory
 
-Flag: `--dockerfile.tpldir`
+Flag: `--dockerfile.tpldir` and `--variants.tpldir`
 
 An optional directory which contains
 [includable templates](https://pkg.go.dev/text/template#hdr-Associated_templates) for your
-templated Dockerfile. Files in this directory which end in `.tpl` can then be
+templated Dockerfile/Variants config. Files in this directory which end in `.tpl` can then be
 included in your main Dockerfile template (or in the includes itself).
 This flag can be used multiple times to include multiple directories.
 
@@ -102,7 +125,7 @@ There are three different cases which may occur:
 
     `--dockerfile.var <VARIANT_NAME>:<KEY_PATH>=value`
 2. Override a variable on all variants. Here the variant name must be omitted.
-    
+
     `--dockerfile.var <KEY_PATH>=value`
 3. Add a new variable. The same rules as mentioned above apply.
 
@@ -135,7 +158,7 @@ Flag: `--out.fmt`
 Dockerfiles are written with the specified naming scheme to the output directory.
 The format takes a go template string that can contain variables defined in the variants.
 
-The default format (`Dockerfile.{{ .image.name }}.{{ .image.tag }}`) allows you to 
+The default format (`Dockerfile.{{ .image.name }}.{{ .image.tag }}`) allows you to
 build the images like this for example (assuming no dots in the name/tag):
 
 ```bash
@@ -181,9 +204,9 @@ Environment variable:
 export DTPL_DOCKERFILE_TPLDIR="some/dir other/dir"
 ```
 
-Notes: 
+Notes:
  - For the flag `dockerfile.var` the environment variable must be specified as json:
-    
+
     `DTPL_DOCKERFILE_VAR='{"key1": "value1"}'`
 
 ### Docker
@@ -195,7 +218,7 @@ based on a busybox image and can thus be used with an interactive shell.
 
 #### Latest
 
-This image is built from scratch and contains the templater only. 
+This image is built from scratch and contains the templater only.
 Example usage:
 
 ```bash
@@ -220,7 +243,7 @@ stages:
 
 generate-dockerfiles:
     stage: pre-build
-    image: 
+    image:
         name: ghcr.io/bossm8/dockerfile-templater:debug
         entrypoint: [""]
     script:
@@ -235,7 +258,7 @@ generate-dockerfiles:
 
 build-images:
     stage: build
-    image: 
+    image:
         name: gcr.io/kaniko-project/executor:debug
         entrypoint: [""]
     script:
