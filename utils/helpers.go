@@ -2,12 +2,14 @@ package utils
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 
+	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/sprig/v3"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -16,13 +18,75 @@ import (
 
 const recursionMaxNums = 1000
 
-// https://github.com/technosophos/k8s-helm/commit/431cc46cad3ae5248e32df1f6c44f2f4ce5547ba
-func toYaml(v interface{}) string {
+// https://github.com/helm/helm/blob/518c69281f42d9b3a5cf99bd959a08e048093e20/pkg/engine/funcs.go#L82
+func toYAML(v interface{}) string {
 	data, err := yaml.Marshal(v)
 	if err != nil {
+		// Swallow errors inside of a template.
+		return ""
+	}
+	return strings.TrimSuffix(string(data), "\n")
+}
+
+// https://github.com/helm/helm/blob/518c69281f42d9b3a5cf99bd959a08e048093e20/pkg/engine/funcs.go#L97
+func fromYAML(str string) map[string]interface{} {
+	m := map[string]interface{}{}
+
+	if err := yaml.Unmarshal([]byte(str), &m); err != nil {
+		m["Error"] = err.Error()
+	}
+	return m
+}
+
+// https://github.com/helm/helm/blob/518c69281f42d9b3a5cf99bd959a08e048093e20/pkg/engine/funcs.go#L112
+func fromYAMLArray(str string) []interface{} {
+	a := []interface{}{}
+
+	if err := yaml.Unmarshal([]byte(str), &a); err != nil {
+		a = []interface{}{err.Error()}
+	}
+	return a
+}
+
+// https://github.com/helm/helm/blob/518c69281f42d9b3a5cf99bd959a08e048093e20/pkg/engine/funcs.go#L125
+func toTOML(v interface{}) string {
+	b := bytes.NewBuffer(nil)
+	e := toml.NewEncoder(b)
+	err := e.Encode(v)
+	if err != nil {
+		return err.Error()
+	}
+	return b.String()
+}
+
+// https://github.com/helm/helm/blob/518c69281f42d9b3a5cf99bd959a08e048093e20/pkg/engine/funcs.go#L139
+func toJSON(v interface{}) string {
+	data, err := json.Marshal(v)
+	if err != nil {
+		// Swallow errors inside of a template.
 		return ""
 	}
 	return string(data)
+}
+
+// https://github.com/helm/helm/blob/518c69281f42d9b3a5cf99bd959a08e048093e20/pkg/engine/funcs.go#L154
+func fromJSON(str string) map[string]interface{} {
+	m := make(map[string]interface{})
+
+	if err := json.Unmarshal([]byte(str), &m); err != nil {
+		m["Error"] = err.Error()
+	}
+	return m
+}
+
+// https://github.com/helm/helm/blob/518c69281f42d9b3a5cf99bd959a08e048093e20/pkg/engine/funcs.go#L169
+func fromJSONArray(str string) []interface{} {
+	a := []interface{}{}
+
+	if err := json.Unmarshal([]byte(str), &a); err != nil {
+		a = []interface{}{err.Error()}
+	}
+	return a
 }
 
 // https://github.com/helm/helm/blob/main/pkg/engine/engine.go#L129
@@ -89,9 +153,15 @@ func ParseTemplate(
 
 	tpl.Funcs(
 		template.FuncMap{
-			"toYaml":  toYaml,
-			"include": includeFun(tpl, includedNames),
-			"tpl":     tplFun(tpl, includedNames),
+			"toToml":        toTOML,
+			"toYaml":        toYAML,
+			"fromYaml":      fromYAML,
+			"fromYamlArray": fromYAMLArray,
+			"toJson":        toJSON,
+			"fromJson":      fromJSON,
+			"fromJsonArray": fromJSONArray,
+			"include":       includeFun(tpl, includedNames),
+			"tpl":           tplFun(tpl, includedNames),
 		}).Funcs(sprig.FuncMap())
 
 	var err error

@@ -10,6 +10,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 	gopkg.in/yaml.v3 v3.0.1
+	github.com/BurntSushi/toml v1.3.2
 )
 
 require (
