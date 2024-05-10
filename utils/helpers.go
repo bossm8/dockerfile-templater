@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
@@ -51,15 +51,6 @@ func tplFun(parent *template.Template, includedNames map[string]int) func(string
 			return "", errors.Wrapf(err, "cannot clone template")
 		}
 
-		// // Re-inject the missingkey option, see text/template issue https://github.com/golang/go/issues/43022
-		// // We have to go by strict from our engine configuration, as the option fields are private in Template.
-		// // TODO: Remove workaround (and the strict parameter) once we build only with golang versions with a fix.
-		// if strict {
-		// 	t.Option("missingkey=error")
-		// } else {
-		// 	t.Option("missingkey=zero")
-		// }
-
 		// Re-inject 'include' so that it can close over our clone of t;
 		// this lets any 'define's inside tpl be 'include'd.
 		t.Funcs(template.FuncMap{
@@ -91,6 +82,7 @@ func tplFun(parent *template.Template, includedNames map[string]int) func(string
 // Parses a template defined in a file.
 func ParseTemplate(
 	file string,
+	templateDirs []string,
 ) *template.Template {
 	tpl := template.New(filepath.Base(file))
 	includedNames := make(map[string]int)
@@ -109,6 +101,7 @@ func ParseTemplate(
 		Error("%s", err)
 	}
 
+	tpl = InitTemplateDirs(tpl, templateDirs)
 	tpl, err = tpl.ParseFiles(path)
 
 	if err != nil {

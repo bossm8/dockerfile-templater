@@ -58,7 +58,7 @@ func init() {
 	)
 
 	TemplaterCMD.PersistentFlags().StringArrayP(
-		dockerfileTplDirFlag, "d", make([]string, 0),
+		dockerfileTplDirFlag, "d", []string{},
 		"Path to a directory containing includable template definitions",
 	)
 	_ = viper.BindPFlag(
@@ -97,7 +97,7 @@ func init() {
 	)
 
 	TemplaterCMD.PersistentFlags().StringArrayP(
-		variantsTplDirFlag, "p", make([]string, 0),
+		variantsTplDirFlag, "p", []string{},
 		"Path to a directory containing includable template definitions",
 	)
 	_ = viper.BindPFlag(
@@ -404,9 +404,7 @@ func (t *variants) loadFromTemplate() {
 
 	utils.LoadYMLFromFile(t.VariantsCfgFile, &vc)
 
-	tpl := utils.ParseTemplate(t.VariantsTplFile)
-	tpl = utils.InitTemplateDirs(tpl, t.VariantsTplDirs)
-
+	tpl := utils.ParseTemplate(t.VariantsTplFile, t.VariantsTplDirs)
 	res := utils.ExecuteTemplate(vc, tpl)
 
 	utils.LoadYMLFromBytes(res, t)
@@ -484,8 +482,7 @@ func (t *templater) Render(variants []*variant) {
 
 // Initializes the main Dockerfile template.
 func (t *templater) initTemplate() {
-	t.template = utils.ParseTemplate(t.DockerfileTpl)
-	t.template = utils.InitTemplateDirs(t.template, t.DockerfileTplDirs)
+	t.template = utils.ParseTemplate(t.DockerfileTpl, t.DockerfileTplDirs)
 }
 
 // Creates the output directory.
