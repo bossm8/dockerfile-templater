@@ -11,6 +11,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/sprig/v3"
+	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
@@ -89,6 +90,25 @@ func fromJSONArray(str string) []interface{} {
 	return a
 }
 
+func mergeOverwriteAppendSlice(dst map[string]interface{}, srcs ...map[string]interface{}) interface{} {
+	for _, src := range srcs {
+		if err := mergo.MergeWithOverwrite(&dst, src, mergo.WithAppendSlice); err != nil {
+			// Swallow errors inside of a template.
+			return ""
+		}
+	}
+	return dst
+}
+
+func mustMergeOverwriteAppendSlice(dst map[string]interface{}, srcs ...map[string]interface{}) (interface{}, error) {
+	for _, src := range srcs {
+		if err := mergo.MergeWithOverwrite(&dst, src, mergo.WithAppendSlice); err != nil {
+			return nil, err
+		}
+	}
+	return dst, nil
+}
+
 // https://github.com/helm/helm/blob/main/pkg/engine/engine.go#L129
 func includeFun(t *template.Template, includedNames map[string]int) func(string, interface{}) (string, error) {
 	return func(name string, data interface{}) (string, error) {
@@ -153,15 +173,17 @@ func ParseTemplate(
 
 	tpl.Funcs(
 		template.FuncMap{
-			"toToml":        toTOML,
-			"toYaml":        toYAML,
-			"fromYaml":      fromYAML,
-			"fromYamlArray": fromYAMLArray,
-			"toJson":        toJSON,
-			"fromJson":      fromJSON,
-			"fromJsonArray": fromJSONArray,
-			"include":       includeFun(tpl, includedNames),
-			"tpl":           tplFun(tpl, includedNames),
+			"toToml":                       toTOML,
+			"toYaml":                       toYAML,
+			"fromYaml":                     fromYAML,
+			"fromYamlArray":                fromYAMLArray,
+			"toJson":                       toJSON,
+			"fromJson":                     fromJSON,
+			"fromJsonArray":                fromJSONArray,
+			"include":                      includeFun(tpl, includedNames),
+			"tpl":                          tplFun(tpl, includedNames),
+			"mergeOverwriteAppendSlice":    mergeOverwriteAppendSlice,
+			"mustMergeOverwriteAppendSlce": mustMergeOverwriteAppendSlice,
 		}).Funcs(sprig.FuncMap())
 
 	var err error
