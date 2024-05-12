@@ -109,6 +109,16 @@ func mustMergeOverwriteAppendSlice(dst map[string]interface{}, srcs ...map[strin
 	return dst, nil
 }
 
+func definedTemplates(t *template.Template) func() []string {
+	return func() []string {
+		var names []string
+		for _, tpl := range t.Templates() {
+			names = append(names, tpl.Name())
+		}
+		return names
+	}
+}
+
 // https://github.com/helm/helm/blob/main/pkg/engine/engine.go#L129
 func includeFun(t *template.Template, includedNames map[string]int) func(string, interface{}) (string, error) {
 	return func(name string, data interface{}) (string, error) {
@@ -184,6 +194,7 @@ func ParseTemplate(
 			"tpl":                          tplFun(tpl, includedNames),
 			"mergeOverwriteAppendSlice":    mergeOverwriteAppendSlice,
 			"mustMergeOverwriteAppendSlce": mustMergeOverwriteAppendSlice,
+			"definedTemplates":             definedTemplates(tpl),
 		}).Funcs(sprig.FuncMap())
 
 	var err error
