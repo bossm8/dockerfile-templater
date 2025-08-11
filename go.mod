@@ -1,6 +1,6 @@
 module github.com/bossm8/dockerfile-templater
 
-go 1.21.0
+go 1.23
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
